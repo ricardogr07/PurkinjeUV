@@ -9,7 +9,7 @@ description = "Utilities to generate Purkinje networks from fractal trees and me
 authors = [{ name = "Ricardo García Ramírez", email = "rgr.5882@gmail.com" }]
 readme = "README.md"
 requires-python = ">=3.8"
-
+license = "MIT"
 dependencies = [
     "numpy",
     "scipy",
