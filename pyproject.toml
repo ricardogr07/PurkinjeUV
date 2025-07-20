@@ -4,12 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "purkinje-uv"
-version = "0.1.0"
+version = "0.1.1"
 description = "Utilities to generate Purkinje networks from fractal trees and mesh surfaces"
 authors = [{ name = "Ricardo García Ramírez", email = "rgr.5882@gmail.com" }]
 readme = "README.md"
 requires-python = ">=3.8"
-license = { text = "MIT" }
+license = "MIT"
 
 dependencies = [
     "numpy",
@@ -19,5 +19,5 @@ dependencies = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/tu_usuario/PurkinjeUV"
-"Repository" = "https://github.com/tu_usuario/PurkinjeUV"
+"Homepage" = "https://github.com/ricardogr07/PurkinjeUV/"
+"Repository" = "https://github.com/ricardogr07/PurkinjeUV/"
