@@ -1,31 +1,42 @@
 name: Publish Python distribution to PyPI
 
 on:
+  push:
+    tags:
+      - 'v*'
   release:
     types: [created]
   workflow_dispatch:
 
+
 jobs:
   build-and-publish:
     runs-on: ubuntu-latest
+    environment: pypi
+
+    permissions:
+      id-token: write
+      contents: read
 
     steps:
-      - name: Check out code
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
 
-      - name: Install dependencies
+      - name: Install build tools
         run: |
-          pip install --upgrade pip
-          pip install build twine
+          python -m pip install --upgrade pip
+          pip install build
 
-      - name: Build
+      - name: Build package
         run: python -m build
+      
+      - name: Display build artifacts
+        run: ls -lh dist
 
-      - name: Upload to PyPI
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-        run: twine upload dist/*
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true

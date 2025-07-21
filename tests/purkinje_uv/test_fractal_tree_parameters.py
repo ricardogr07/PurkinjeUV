@@ -1,5 +1,6 @@
 from purkinje_uv.fractal_tree_parameters import Parameters
 
+
 def test_parameters_defaults():
     params = Parameters()
 
@@ -17,6 +18,7 @@ def test_parameters_defaults():
     assert isinstance(params.fascicles_length, list)
     assert len(params.fascicles_angles) == 0
     assert len(params.fascicles_length) == 0
+
 
 def test_parameters_mutability():
     params = Parameters()
