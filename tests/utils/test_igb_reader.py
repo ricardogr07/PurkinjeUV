@@ -3,7 +3,7 @@ import numpy as np
 from io import BytesIO
 from unittest.mock import patch
 
-from purkinje_uv.igb_reader import IGBReader
+from purkinje_uv import IGBReader
 
 
 @pytest.fixture

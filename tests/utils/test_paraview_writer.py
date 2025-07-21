@@ -3,7 +3,7 @@ import xml.etree.ElementTree as ET
 import pytest
 from tempfile import TemporaryDirectory
 
-from utils.paraview_writer import VTUWriter
+from purkinje_uv import VTUWriter
 
 
 @pytest.fixture

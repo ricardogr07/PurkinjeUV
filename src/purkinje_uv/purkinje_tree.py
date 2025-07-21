@@ -9,6 +9,7 @@ import vtk
 from vtkmodules.numpy_interface import dataset_adapter as dsa
 from utils.vtkutils import vtk_unstructuredgrid_from_list
 
+
 class PurkinjeTree:
     "Class for eikonal solver on Purkinje tree"
 
