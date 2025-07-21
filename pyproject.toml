@@ -17,6 +17,9 @@ dependencies = [
     "pyvista",
 ]
 
+[tool.setuptools.packages.find]
+where = ["src"]
+
 [project.urls]
 "Homepage" = "https://github.com/ricardogr07/PurkinjeUV/"
 "Repository" = "https://github.com/ricardogr07/PurkinjeUV/"
