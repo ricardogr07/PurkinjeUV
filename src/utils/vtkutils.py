@@ -1,5 +1,3 @@
-"""Interface to some VTK functions.
-"""
 import vtk
 import numpy as np
 from vtkmodules.numpy_interface import dataset_adapter as dsa
@@ -151,11 +149,3 @@ def vtk_extract_boundary_surfaces(vtk_cell, triangulate=False):
         return tri.GetOutput()
     else:
         return geomv.GetOutput()
-
-if __name__ == "__main__":
-
-    fname_cell = "data/crt012-01-heart1mm-e.igb"
-    vtk_cell = vtkIGBReader(fname_cell, cell_centered=True)
-    print(vtk_cell.GetDimensions())
-
-    vtk_extract_boundary_surfaces(vtk_cell)

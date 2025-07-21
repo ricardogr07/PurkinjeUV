@@ -5,7 +5,7 @@ from itertools import chain
 import meshio
 from fimpy.solver import FIMPY
 
-from .vtkutils import *
+from utils.vtkutils import *
 
 class PurkinjeTree:
     "Class for eikonal solver on Purkinje tree"
@@ -54,47 +54,6 @@ class PurkinjeTree:
         else:
             return act
 
-    # def activate(self, x0, x0_vals, tol=1e-8, return_only_pmj=True):
-    #     "Compute activation in the tree"
-
-    #     xyz = self.xyz
-
-    #     # initialize the data structure
-    #     act = np.empty(xyz.shape[0])
-    #     act.fill(np.inf)
-
-    #     # set initial conditions
-    #     act[x0] = x0_vals
-
-    #     # we assume no activation in the middle of the branch
-    #     while True:
-    #         act_old = act.copy()
-    #         # iterate over the branches
-    #         # NOTE this could be done in parallel
-    #         for branch in self.branches.values():
-    #             # points in the branch
-    #             bn = branch.nodes
-    #             bp = xyz[bn,:]
-    #             # length of each segment
-    #             le = np.linalg.norm(np.diff(bp,axis=0),axis=1)
-    #             # activation from first node
-    #             dl = np.r_[0.0,np.cumsum(le)] / self.cv
-    #             # update all nodes in the branch from left and right
-    #             act[bn] = np.minimum( dl + act[bn[0]], dl[::-1] + act[bn[-1]] )
-
-    #         err = np.linalg.norm(act-act_old)
-    #         if err < tol:
-    #             break
-
-    #     # update activation in VTK
-    #     da = dsa.WrapDataObject(self.vtk_tree)
-    #     da.PointData['activation'][:] = act
-
-    #     if return_only_pmj:
-    #         return act[self.pmj]
-    #     else:
-    #         return act
-
     def save(self,fname):
         "Save to VTK"
 
@@ -122,7 +81,6 @@ class PurkinjeTree:
         da = dsa.WrapDataObject(self.vtk_tree)
         act = da.PointData['activation']
         return act[self.pmj]
-
 
     def save_meshio(self,fname,point_data=None,cell_data=None):
         "Save with meshio"

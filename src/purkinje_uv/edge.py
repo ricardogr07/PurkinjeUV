@@ -24,9 +24,11 @@ class Edge:
         parent: int | None,
         branch: int | None
     ) -> None:
+        
         self.n1 = n1 #ids
         self.n2 = n2 #ids
 
         self.dir = (nodes[n2] - nodes[n1])/np.linalg.norm(nodes[n2] - nodes[n1])
         self.parent = parent
         self.branch = branch
+        
