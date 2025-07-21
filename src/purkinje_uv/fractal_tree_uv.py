@@ -6,7 +6,6 @@ import meshio
 import numpy as np
 import pyvista as pv
 import vtk
-from scipy.spatial import cKDTree
 
 from .edge import Edge
 from .mesh import Mesh
@@ -402,7 +401,6 @@ class FractalTree:
             # Growing step
             for _ in range(int(branch_length / dx)):
                 growing_queue = []
-                tree = cKDTree(nodes)
                 new_nodes = []
                 while edge_queue:
                     edge_id = edge_queue.pop(0)

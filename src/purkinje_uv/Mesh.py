@@ -414,7 +414,6 @@ class Mesh:
 
     def computeLaplace(self, nodes, nodeVals, filename=None):
         nNodes = self.verts.shape[0]
-        nElem = self.connectivity.shape[0]
 
         K, M = self.computeLaplacian()
         F = np.zeros((nNodes, 1))
@@ -426,8 +425,6 @@ class Mesh:
         jActive, iActive = np.meshgrid(activeNodes, activeNodes)
 
         jKnown, iKnown = np.meshgrid(nodes, activeNodes)
-
-        Js = np.zeros((nElem, 1))
 
         T = spsolve(
             K[iActive, jActive], F[activeNodes, 0] - K[iKnown, jKnown].dot(nodeVals)

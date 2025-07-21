@@ -1,5 +1,4 @@
 import numpy as np
-from scipy.spatial import cKDTree
 
 
 class Branch:
@@ -10,7 +9,7 @@ class Branch:
         init_node (int): initial node to grow the branch. This is an index that refers to a node in the nodes.nodes array.
         init_dir (array): initial direction to grow the branch. In general, it refers to the direction of the last segment of the mother brach.
         init_tri (int): the index of triangle of the mesh where the init_node sits.
-        l (float): total length of the branch
+        length (float): total length of the branch
         angle (float): angle (rad) with respect to the init_dir in the plane of the init_tri triangle
         w (float): repulsitivity parameter. Controls how much the branches repel each other.
         nodes: the object of the class nodes that contains all the nodes of the existing branches.
@@ -33,7 +32,7 @@ class Branch:
         init_node,
         init_dir,
         init_tri,
-        l,
+        length,
         angle,
         w,
         nodes,
@@ -48,7 +47,6 @@ class Branch:
         #        self.normal=np.array([0.0,0.0,0.0])
         self.queue = []
         self.growing = True
-        shared_node = -1
         init_normal = mesh.normals[init_tri]
         nodes.update_collision_tree(brother_nodes)
         #        global_nnodes=len(nodes.nodes)
@@ -65,7 +63,7 @@ class Branch:
         #    print nodes.nodes[init_node]+dir*l/Nsegments
         for i in range(1, Nsegments):
             intriangle = self.add_node_to_queue(
-                mesh, self.queue[i - 1], dir * l / Nsegments
+                mesh, self.queue[i - 1], dir * length / Nsegments
             )
             # print 'intriangle',intriangle
             if not intriangle:
@@ -74,12 +72,11 @@ class Branch:
                 self.growing = False
                 break
             collision = nodes.collision(self.queue[i])
-            if collision[1] < l / 5.0:
+            if collision[1] < length / 5.0:
                 # print("Collision",i, collision)
                 self.growing = False
                 self.queue.pop()
                 self.triangles.pop()
-                shared_node = collision[0]
                 break
             grad = nodes.gradient(self.queue[i])
             normal = mesh.normals[self.triangles[i], :]

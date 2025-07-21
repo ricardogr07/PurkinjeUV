@@ -46,12 +46,12 @@ class IGBReader:
             buf = f.read(1024)
 
         lines = buf.decode(errors="ignore").split("\x00", 1)[0].split("\r\n")
-        comments = [l.strip()[2:] for l in lines if l.startswith("#")]
+        comments = [line.strip()[2:] for line in lines if line.startswith("#")]
         fields = sum(
             (
-                l.split()
-                for l in (l.strip() for l in lines if not l.startswith("#"))
-                if l
+                line.split()
+                for line in (line.strip() for line in lines if not line.startswith("#"))
+                if line
             ),
             [],
         )
