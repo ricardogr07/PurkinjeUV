@@ -75,7 +75,7 @@ class FractalTree:
         self.loc.SetDataSet(mpv)
         self.loc.BuildLocator()
         self.scaling_nodes = np.array(
-            self.mesh_uv.tri2node_interpolation(self.m.uvscaling)
+            self.mesh_uv.tri2node_interpolation(self.mesh.uvscaling)
         )
         self.params = params
 
