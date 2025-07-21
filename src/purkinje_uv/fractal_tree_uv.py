@@ -1,97 +1,69 @@
-import numpy as np
-from scipy.spatial import cKDTree
+import logging
 from collections import defaultdict
-from .Mesh import Mesh
+from typing import Any, Tuple, List
+
 import meshio
+import numpy as np
 import pyvista as pv
 import vtk
+from scipy.spatial import cKDTree
 
-
-class Edge:
-    def __init__(self, n1, n2, nodes, parent, branch) -> None:
-        self.n1 = n1 #ids
-        self.n2 = n2 #ids
-
-        self.dir = (nodes[n2] - nodes[n1])/np.linalg.norm(nodes[n2] - nodes[n1])
-        self.parent = parent
-        self.branch = branch
-
-def interpolate(vectors, r, t):
-    return t*vectors[2] + r*vectors[1] + (1-r-t)*vectors[0]
-
-def eval_field(point, field, mesh):
-    ppoint,tri,r,t = mesh.project_new_point(point, 5)
-    return interpolate(field[mesh.connectivity[tri]], r, t), ppoint, tri
-
-def point_in_mesh(point, mesh):
-    point = np.append(point, np.zeros(1))
-    _,tri,_,_ = mesh.project_new_point(point, 5)
-    return tri >= 0
-
-def point_in_mesh_vtk(point, loc):
-    point = np.append(point, np.zeros(1))
-    cellId = vtk.reference(0)
-    subId  = vtk.reference(0)
-    d = vtk.reference(0.0)
-    ppoint = np.zeros(3)
-    loc.FindClosestPoint(point, ppoint, cellId, subId, d)
-    return d.get() < 1e-9
-
-
-    
-
-
-class Parameters:
-    """Class to specify the parameters of the fractal tree.
-            
-    Attributes:
-        meshfile (str): path and filename to obj file name.
-        filename (str): name of the output files.
-        init_node (numpy array): the first node of the tree.
-        second_node (numpy array): this point is only used to calculate the initial direction of the tree and is not included in the tree. Please avoid selecting nodes that are connected to the init_node by a single edge in the mesh, because it causes numerical issues.
-        init_length (float): length of the first branch.
-        N_it (int): number of generations of branches.
-        length (float): average lenght of the branches in the tree.
-        std_length (float): standard deviation of the length. Set to zero to avoid random lengths.
-        min_length (float): minimum length of the branches. To avoid randomly generated negative lengths.
-        branch_angle (float): angle with respect to the direction of the previous branch and the new branch.
-        w (float): repulsivity parameter.
-        l_segment (float): length of the segments that compose one branch (approximately, because the lenght of the branch is random). It can be interpreted as the element length in a finite element mesh.
-        Fascicles (bool): include one or more straigth branches with different lengths and angles from the initial branch. It is motivated by the fascicles of the left ventricle. 
-        fascicles_angles (list): angles with respect to the initial branches of the fascicles. Include one per fascicle to include.
-        fascicles_length (list): length  of the fascicles. Include one per fascicle to include. The size must match the size of fascicles_angles.
-        save (bool): save text files containing the nodes, the connectivity and end nodes of the tree.
-        save_paraview (bool): save a .vtu paraview file. The tvtk module must be installed.
-    """
-    def __init__(self):
-        self.meshfile = None
-        self.init_node_id= 0
-        self.second_node_id = 1
-        self.init_length=0.1
-#Number of iterations (generations of branches)
-        self.N_it=10
-#Median length of the branches
-        self.length=.1
-#Standard deviation of the length
-#Min length to avoid negative length
-        self.branch_angle=0.15
-        self.w=0.1
-#Length of the segments (approximately, because the lenght of the branch is random)
-        self.l_segment=.01
-
-###########################################
-# Fascicles data
-###########################################
-        self.fascicles_angles=[] #rad
-        self.fascicles_length=[]
+from .edge import Edge
+from .mesh import Mesh
 
 class FractalTree:
-    def __init__(self, params):
-        self.m = Mesh(params.meshfile)
-        print('computing uv map')
-        self.m.compute_uvscaling()
+    """
+    FractalTree generates a fractal tree structure within a given mesh domain using UV mapping and geometric rules.
+    Attributes
+    m : Mesh
+        The mesh object loaded from the provided mesh file.
+    mesh_uv : Mesh
+        The mesh object in UV space.
+    loc : vtk.vtkCellLocator
+        VTK cell locator for efficient spatial queries.
+    scaling_nodes : np.ndarray
+        Array of scaling factors for mesh nodes.
+    params : Any
+        Parameters for tree growth and mesh configuration.
+    uv_nodes : np.ndarray
+        Array of node coordinates in UV space.
+    edges : List[Edge]
+        List of edges representing the tree branches.
+    end_nodes : List[int]
+        List of indices of terminal nodes.
+    connectivity : List[List[int]]
+        List of edge connectivity pairs.
+    nodes_xyz : List[np.ndarray]
+        List of node coordinates in XYZ space.
+    Methods
+    -------
+    grow_tree() -> None
+        Generates the fractal tree structure by iteratively growing and branching according to geometric and collision rules.
+    save(filename: str) -> None
+    """
 
-        self.mesh_uv = Mesh(verts = np.concatenate((self.m.uv,np.zeros((self.m.uv.shape[0],1))), axis =1), connectivity= self.m.connectivity)
+    def __init__(self, params: Any) -> None:
+        """
+        Initializes the fractal tree UV mapping object.
+        Args:
+            params (Any): An object containing parameters for mesh file path and other settings.
+        Attributes:
+            m (Mesh): The original mesh loaded from the file specified in params.
+            mesh_uv (Mesh): A mesh object with UV coordinates extended to 3D.
+            loc (vtk.vtkCellLocator): VTK cell locator for spatial queries on the mesh.
+            scaling_nodes (np.ndarray): Array of node scaling values interpolated from the UV scaling.
+            params (Any): Stores the input parameters for later use.
+        Side Effects:
+            - Prints 'computing uv map' to the console.
+            - Builds a VTK cell locator for the mesh.
+        Raises:
+            Any exceptions raised by Mesh, pv.read, or VTK methods will propagate.
+        """
+        self.mesh = Mesh(params.meshfile)
+        print('computing uv map')
+        self.mesh.compute_uvscaling()
+
+        self.mesh_uv = Mesh(verts = np.concatenate((self.mesh.uv,np.zeros((self.mesh.uv.shape[0],1))), axis =1), connectivity= self.mesh.connectivity)
         mpv = pv.read(params.meshfile)
         mpv.points = self.mesh_uv.verts
         self.loc = vtk.vtkCellLocator()
@@ -99,13 +71,29 @@ class FractalTree:
         self.loc.BuildLocator()
         self.scaling_nodes = np.array(self.mesh_uv.tri2node_interpolation(self.m.uvscaling))
         self.params = params
-    # def scaling(self,x):
-    #     x = np.append(x, np.zeros(1))
+    
+    def _interpolate(self, vectors, r, t):
+        return t*vectors[2] + r*vectors[1] + (1-r-t)*vectors[0]
 
-    #     f, _, tri = eval_field(x, self.scaling_nodes, self.mesh_uv)
+    def _eval_field(self, point, field, mesh):
+        ppoint,tri,r,t = mesh.project_new_point(point, 5)
+        return self._interpolate(field[mesh.connectivity[tri]], r, t), ppoint, tri
 
-    #     return np.sqrt(f), tri
-    def scaling(self,x):
+    def _point_in_mesh(self, point, mesh):
+        point = np.append(point, np.zeros(1))
+        _,tri,_,_ = mesh.project_new_point(point, 5)
+        return tri >= 0
+
+    def _point_in_mesh_vtk(self, point, loc):
+        point = np.append(point, np.zeros(1))
+        cellId = vtk.reference(0)
+        subId  = vtk.reference(0)
+        d = vtk.reference(0.0)
+        ppoint = np.zeros(3)
+        loc.FindClosestPoint(point, ppoint, cellId, subId, d)
+        return d.get() < 1e-9
+
+    def _scaling(self,x):
         x = np.append(x, np.zeros(1))
         cellId = vtk.reference(0)
         subId  = vtk.reference(0)
@@ -117,7 +105,7 @@ class FractalTree:
         else:
             tri = cellId.get()
 
-        return np.sqrt(self.m.uvscaling[tri]), tri
+        return np.sqrt(self.mesh.uvscaling[tri]), tri
     
     def grow_tree(self):
         branches = defaultdict(list)
@@ -131,7 +119,7 @@ class FractalTree:
          
         init_node = self.mesh_uv.verts[self.params.init_node_id][:2]
         second_node = self.mesh_uv.verts[self.params.second_node_id][:2]
-        s, tri = self.scaling(init_node) 
+        s, tri = self._scaling(init_node) 
         if tri < 0:
             raise "the initial node is outside the domain"
         init_dir = second_node - init_node
@@ -162,7 +150,7 @@ class FractalTree:
             edge = edges[edge_id]
             new_dir = edge.dir 
             new_dir /= np.linalg.norm(new_dir)
-            s, tri = self.scaling(nodes[edge.n2]) 
+            s, tri = self._scaling(nodes[edge.n2]) 
             if tri < 0:
                 raise "the initial branch goes out of the domain"
             new_node = nodes[edge.n2] + new_dir*dx*s
@@ -180,7 +168,7 @@ class FractalTree:
             edge = edges[branching_edge_id]
             new_dir = np.matmul(Rotation, edge.dir)
             new_dir /= np.linalg.norm(new_dir)
-            s, tri = self.scaling(nodes[edge.n2]) 
+            s, tri = self._scaling(nodes[edge.n2]) 
             if tri < 0:
                 raise "the fascicle goes out of the domain"
             new_node = nodes[edge.n2] + new_dir*dx*s
@@ -195,7 +183,7 @@ class FractalTree:
                 edge = edges[edge_id]
                 new_dir = edge.dir 
                 new_dir /= np.linalg.norm(new_dir)
-                s, tri = self.scaling(nodes[edge.n2]) 
+                s, tri = self._scaling(nodes[edge.n2]) 
                 if tri < 0:
                     raise "the fascicle goes out of the domain"
                 new_node = nodes[edge.n2] + new_dir*dx*s
@@ -216,13 +204,13 @@ class FractalTree:
                 for R in [Rplus, Rminus]:
                     new_dir = np.matmul(R,edge.dir)
                     new_dir /= np.linalg.norm(new_dir)
-                    s, tri = self.scaling(nodes[edge.n2]) 
+                    s, tri = self._scaling(nodes[edge.n2]) 
                     new_node = nodes[edge.n2] + new_dir*dx*s
                     # aa = point_in_mesh(new_node, self.mesh_uv)
                     # bb = point_in_mesh_vtk(new_node, self.loc)
                     # if aa != bb:
                     #     print(new_node,aa,bb)
-                    if not point_in_mesh_vtk(new_node, self.loc):
+                    if not self._point_in_mesh_vtk(new_node, self.loc):
                         end_nodes.append(edge.n2)
                         continue
                     new_node_id = len(nodes)
@@ -261,7 +249,7 @@ class FractalTree:
                     all_dist[branches[edge.branch]] = 1e9
                     sister_dist = all_dist[branches[sister_branches[edge.branch]]]
                     all_dist[branches[sister_branches[edge.branch]]] = 1e9
-                    s, tri = self.scaling(nodes[edge.n2]) 
+                    s, tri = self._scaling(nodes[edge.n2]) 
 
                     if all_dist.min() < 0.9*dx*s:
                         end_nodes.append(edge.n2)
@@ -292,7 +280,7 @@ class FractalTree:
                     # bb = point_in_mesh_vtk(new_node, self.loc)
                     # if aa != bb:
                     #     print(new_node,aa,bb)
-                    if not point_in_mesh_vtk(new_node, self.loc):            
+                    if not self._point_in_mesh_vtk(new_node, self.loc):            
                         end_nodes.append(edge.n2)
                         continue
                     nodes.append(new_node)
@@ -316,11 +304,21 @@ class FractalTree:
         for node in nodes:
 
             n = np.append(node, np.zeros(1))
-            f, _, tri = eval_field(n, self.m.verts, self.mesh_uv)
+            f, _, tri = self._eval_field(n, self.mesh.verts, self.mesh_uv)
             self.nodes_xyz.append(f) 
 
-    def save(self, filename):
-        line = meshio.Mesh(np.array(self.nodes_xyz), [('line',np.array(self.connectivity))])
-        line.write(filename)
+    def save(self, filename: str) -> None:
+        """
+        Saves the fractal tree structure as a mesh file.
 
-
+        Parameters
+        ----------
+        filename : str
+            The path to the file where the mesh will be saved.
+        """
+        try:
+            line = meshio.Mesh(np.array(self.nodes_xyz), [('line', np.array(self.connectivity))])
+            line.write(filename)
+            logging.info(f"Fractal tree mesh saved to {filename}")
+        except Exception as e:
+            logging.error(f"Failed to save fractal tree mesh to {filename}: {e}")
