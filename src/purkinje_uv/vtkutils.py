@@ -4,7 +4,7 @@ import vtk
 import numpy as np
 from vtkmodules.numpy_interface import dataset_adapter as dsa
 from vtkmodules.util.numpy_support import numpy_to_vtkIdTypeArray,numpy_to_vtk
-from .igbutils import read_igb, read_igb_header
+from .igb_reader import IGBReader
 
 def vtk_unstructuredgrid_from_list(xyz,cells,vtk_type):
     "Creates VTK ugrid from list of points and edges"
@@ -28,12 +28,11 @@ def vtk_unstructuredgrid_from_list(xyz,cells,vtk_type):
 
     return grid
 
-
 def vtkIGBReader(fname,name="cell",cell_centered=True,scale=1.0,origin=0.0):
     "Convert to VTK image"
 
     # first we check the header
-    hdr = read_igb_header(fname)
+    hdr = IGBReader.read_header(fname)
 
     # set up the reader
     igb_reader = vtk.vtkImageReader()
@@ -77,7 +76,6 @@ def vtkIGBReader(fname,name="cell",cell_centered=True,scale=1.0,origin=0.0):
         vtk_img = igb_reader.GetOutput()
 
     return vtk_img
-
 
 def vtk_extract_boundary_surfaces(vtk_cell, triangulate=False):
     "Extract left/right endocardium from the cell file"
