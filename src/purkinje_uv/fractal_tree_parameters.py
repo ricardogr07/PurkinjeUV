@@ -17,24 +17,25 @@ class Parameters:
         - Fascicles are straight branches with different lengths and angles, motivated by the fascicles of the left ventricle.
         - To avoid negative branch lengths, ensure randomization parameters are set appropriately.
     """
+
     def __init__(self):
         self.meshfile = None
-        self.init_node_id= 0
+        self.init_node_id = 0
         self.second_node_id = 1
-        self.init_length=0.1
-        #Number of iterations (generations of branches)
-        self.N_it=10
-        #Median length of the branches
-        self.length=.1
-        #Standard deviation of the length
-        #Min length to avoid negative length
-        self.branch_angle=0.15
-        self.w=0.1
-        #Length of the segments (approximately, because the lenght of the branch is random)
-        self.l_segment=.01
+        self.init_length = 0.1
+        # Number of iterations (generations of branches)
+        self.N_it = 10
+        # Median length of the branches
+        self.length = 0.1
+        # Standard deviation of the length
+        # Min length to avoid negative length
+        self.branch_angle = 0.15
+        self.w = 0.1
+        # Length of the segments (approximately, because the lenght of the branch is random)
+        self.l_segment = 0.01
 
         ###########################################
         # Fascicles data
         ###########################################
-        self.fascicles_angles=[] #rad
-        self.fascicles_length=[]
+        self.fascicles_angles = []  # rad
+        self.fascicles_length = []

@@ -11,6 +11,14 @@ from utils.paraview_writer import VTUWriter
 import utils.vtkutils as vtkutils
 
 __all__ = [
-    "Edge", "FractalTree", "Mesh", "Parameters", "Nodes", "Branch", "PurkinjeTree",
-    "IGBReader", "VTUWriter", "vtkutils"
+    "Edge",
+    "FractalTree",
+    "Mesh",
+    "Parameters",
+    "Nodes",
+    "Branch",
+    "PurkinjeTree",
+    "IGBReader",
+    "VTUWriter",
+    "vtkutils",
 ]

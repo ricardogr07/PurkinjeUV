@@ -1,5 +1,6 @@
 import numpy as np
 
+
 class Edge:
     """
     Represents an edge between two nodes in a graph structure.
@@ -16,19 +17,19 @@ class Edge:
         parent (Optional[int]): The parent edge ID.
         branch (Optional[int]): The branch ID.
     """
+
     def __init__(
         self,
         n1: int,
         n2: int,
         nodes: np.ndarray,
         parent: int | None,
-        branch: int | None
+        branch: int | None,
     ) -> None:
-        
-        self.n1 = n1 #ids
-        self.n2 = n2 #ids
 
-        self.dir = (nodes[n2] - nodes[n1])/np.linalg.norm(nodes[n2] - nodes[n1])
+        self.n1 = n1  # ids
+        self.n2 = n2  # ids
+
+        self.dir = (nodes[n2] - nodes[n1]) / np.linalg.norm(nodes[n2] - nodes[n1])
         self.parent = parent
         self.branch = branch
-        

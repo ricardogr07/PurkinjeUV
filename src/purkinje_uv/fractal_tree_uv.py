@@ -11,6 +11,7 @@ from scipy.spatial import cKDTree
 from .edge import Edge
 from .mesh import Mesh
 
+
 class FractalTree:
     """
     FractalTree generates a fractal tree structure within a given mesh domain using UV mapping and geometric rules.
@@ -60,18 +61,25 @@ class FractalTree:
             Any exceptions raised by Mesh, pv.read, or VTK methods will propagate.
         """
         self.mesh = Mesh(params.meshfile)
-        print('computing uv map')
+        print("computing uv map")
         self.mesh.compute_uvscaling()
 
-        self.mesh_uv = Mesh(verts = np.concatenate((self.mesh.uv,np.zeros((self.mesh.uv.shape[0],1))), axis =1), connectivity= self.mesh.connectivity)
+        self.mesh_uv = Mesh(
+            verts=np.concatenate(
+                (self.mesh.uv, np.zeros((self.mesh.uv.shape[0], 1))), axis=1
+            ),
+            connectivity=self.mesh.connectivity,
+        )
         mpv = pv.read(params.meshfile)
         mpv.points = self.mesh_uv.verts
         self.loc = vtk.vtkCellLocator()
         self.loc.SetDataSet(mpv)
         self.loc.BuildLocator()
-        self.scaling_nodes = np.array(self.mesh_uv.tri2node_interpolation(self.m.uvscaling))
+        self.scaling_nodes = np.array(
+            self.mesh_uv.tri2node_interpolation(self.m.uvscaling)
+        )
         self.params = params
-    
+
     def _interpolate(self, vectors: np.ndarray, r: float, t: float) -> np.ndarray:
         """
         Interpolates between three vectors using barycentric coordinates.
@@ -87,13 +95,10 @@ class FractalTree:
         Note:
             The first vector's weight is computed as (1 - r - t).
         """
-        return t*vectors[2] + r*vectors[1] + (1-r-t)*vectors[0]
+        return t * vectors[2] + r * vectors[1] + (1 - r - t) * vectors[0]
 
     def _eval_field(
-        self,
-        point: np.ndarray,
-        field: np.ndarray,
-        mesh: Mesh
+        self, point: np.ndarray, field: np.ndarray, mesh: Mesh
     ) -> Tuple[Any, Any, int]:
         """
         Evaluates the field at a given point by projecting the point onto the mesh and interpolating the field value.
@@ -109,7 +114,7 @@ class FractalTree:
                 - The projected point coordinates.
                 - The index of the triangle in the mesh where the point was projected.
         """
-        ppoint,tri,r,t = mesh.project_new_point(point, 5)
+        ppoint, tri, r, t = mesh.project_new_point(point, 5)
         return self._interpolate(field[mesh.connectivity[tri]], r, t), ppoint, tri
 
     def _point_in_mesh(self, point: np.ndarray, mesh: Mesh) -> bool:
@@ -124,7 +129,7 @@ class FractalTree:
             bool: True if the point is inside the mesh, False otherwise.
         """
         point = np.append(point, np.zeros(1))
-        _,tri,_,_ = mesh.project_new_point(point, 5)
+        _, tri, _, _ = mesh.project_new_point(point, 5)
         return tri >= 0
 
     def _point_in_mesh_vtk(self, point: np.ndarray, loc: vtk.vtkCellLocator) -> bool:
@@ -140,7 +145,7 @@ class FractalTree:
         """
         point = np.append(point, np.zeros(1))
         cellId = vtk.reference(0)
-        subId  = vtk.reference(0)
+        subId = vtk.reference(0)
         d = vtk.reference(0.0)
         ppoint = np.zeros(3)
         loc.FindClosestPoint(point, ppoint, cellId, subId, d)
@@ -160,7 +165,7 @@ class FractalTree:
         """
         x = np.append(x, np.zeros(1))
         cellId = vtk.reference(0)
-        subId  = vtk.reference(0)
+        subId = vtk.reference(0)
         d = vtk.reference(0.0)
         ppoint = np.zeros(3)
         self.loc.FindClosestPoint(x, ppoint, cellId, subId, d)
@@ -183,7 +188,13 @@ class FractalTree:
         nodes.append(new_node)
         return len(nodes) - 1
 
-    def _compute_new_direction(self, dir: np.ndarray, rotation: np.ndarray, grad_dist: np.ndarray = None, w: float = 0.0) -> np.ndarray:
+    def _compute_new_direction(
+        self,
+        dir: np.ndarray,
+        rotation: np.ndarray,
+        grad_dist: np.ndarray = None,
+        w: float = 0.0,
+    ) -> np.ndarray:
         """
         Computes a new direction vector by applying a rotation and optionally adding a weighted gradient.
         Args:
@@ -217,7 +228,7 @@ class FractalTree:
         nodes: List[np.ndarray],
         branches: defaultdict,
         dx: float,
-        init_branch_length: float
+        init_branch_length: float,
     ) -> int:
         """
         Grows the initial branch of the fractal tree by iteratively adding new nodes and edges.
@@ -261,7 +272,7 @@ class FractalTree:
         branches: dict,
         edge_queue: list,
         branch_id: int,
-        dx: float
+        dx: float,
     ) -> None:
         """
         Grows fascicles from a given branching edge in a fractal tree structure.
@@ -286,11 +297,15 @@ class FractalTree:
             - New nodes and edges are added to the tree as fascicles are grown.
             - The function modifies the edges, nodes, branches, and edge_queue in-place.
         """
-        for fascicle_length, fascicles_angle in zip(self.params.fascicles_length, self.params.fascicles_angles):
-            Rotation = np.array([
-                [np.cos(fascicles_angle), -np.sin(fascicles_angle)],
-                [np.sin(fascicles_angle),  np.cos(fascicles_angle)]
-            ])
+        for fascicle_length, fascicles_angle in zip(
+            self.params.fascicles_length, self.params.fascicles_angles
+        ):
+            Rotation = np.array(
+                [
+                    [np.cos(fascicles_angle), -np.sin(fascicles_angle)],
+                    [np.sin(fascicles_angle), np.cos(fascicles_angle)],
+                ]
+            )
             edge = edges[branching_edge_id]
             new_dir = self._compute_new_direction(edge.dir, Rotation)
             s, tri = self._scaling(nodes[edge.n2])
@@ -301,7 +316,9 @@ class FractalTree:
             branch_id += 1
             branches[branch_id].append(new_node_id)
             edge_queue.append(len(edges))
-            edges.append(Edge(edge.n2, new_node_id, nodes, branching_edge_id, edge.branch))
+            edges.append(
+                Edge(edge.n2, new_node_id, nodes, branching_edge_id, edge.branch)
+            )
             # Grow the fascicle
             for _ in range(int(fascicle_length / dx)):
                 edge_id = edge_queue.pop(0)
@@ -329,7 +346,7 @@ class FractalTree:
         Rplus: np.ndarray,
         Rminus: np.ndarray,
         end_nodes: list,
-        sister_branches: dict
+        sister_branches: dict,
     ) -> None:
         """
         Simulates the iterative growth of a fractal tree structure over multiple generations.
@@ -359,7 +376,7 @@ class FractalTree:
             - Assumes existence of Edge class and cKDTree for spatial queries.
         """
         for gen in range(self.params.N_it):
-            print('generation', gen)
+            print("generation", gen)
             branching_queue = []
             # Branching step
             while edge_queue:
@@ -391,11 +408,15 @@ class FractalTree:
                     edge_id = edge_queue.pop(0)
                     edge = edges[edge_id]
                     s, tri = self._scaling(nodes[edge.n2])
-                    collision, grad_dist = self._collision_check(nodes, branches, sister_branches, edge, dx, s)
+                    collision, grad_dist = self._collision_check(
+                        nodes, branches, sister_branches, edge, dx, s
+                    )
                     if collision:
                         end_nodes.append(edge.n2)
                         continue
-                    new_dir = self._compute_new_direction(edge.dir, np.eye(2), grad_dist, w)
+                    new_dir = self._compute_new_direction(
+                        edge.dir, np.eye(2), grad_dist, w
+                    )
                     new_node = nodes[edge.n2] + new_dir * dx * s
                     if not self._can_grow_to(new_node, self.loc):
                         end_nodes.append(edge.n2)
@@ -404,7 +425,9 @@ class FractalTree:
                     new_nodes.append(new_node)
                     growing_queue.append(len(edges))
                     branches[edge.branch].append(new_node_id)
-                    edges.append(Edge(edge.n2, new_node_id, nodes, edge_id, edge.branch))
+                    edges.append(
+                        Edge(edge.n2, new_node_id, nodes, edge_id, edge.branch)
+                    )
                 edge_queue = growing_queue
 
     def grow_tree(self):
@@ -434,17 +457,38 @@ class FractalTree:
         theta = self.params.branch_angle
         w = self.params.w
 
-        Rplus = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
-        Rminus = np.array([[np.cos(-theta), -np.sin(-theta)], [np.sin(-theta), np.cos(-theta)]])
+        Rplus = np.array(
+            [[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]]
+        )
+        Rminus = np.array(
+            [[np.cos(-theta), -np.sin(-theta)], [np.sin(-theta), np.cos(-theta)]]
+        )
 
         # Grow initial branch
-        branching_edge_id = self._grow_initial_branch(edge_queue, edges, nodes, branches, dx, init_branch_length)
-        
-        # Grow fascicles from the initial branch
-        self._grow_fascicles(branching_edge_id, edges, nodes, branches, edge_queue, branch_id, dx)
+        branching_edge_id = self._grow_initial_branch(
+            edge_queue, edges, nodes, branches, dx, init_branch_length
+        )
 
-        self._grow_generations(edges, nodes, branches, edge_queue, branch_id, dx, branch_length, w, Rplus, Rminus, end_nodes, sister_branches)
-        
+        # Grow fascicles from the initial branch
+        self._grow_fascicles(
+            branching_edge_id, edges, nodes, branches, edge_queue, branch_id, dx
+        )
+
+        self._grow_generations(
+            edges,
+            nodes,
+            branches,
+            edge_queue,
+            branch_id,
+            dx,
+            branch_length,
+            w,
+            Rplus,
+            Rminus,
+            end_nodes,
+            sister_branches,
+        )
+
         # Finalize end nodes and connectivity
         end_nodes += [edges[edge].n2 for edge in edge_queue]
         self.uv_nodes = np.array(nodes)
@@ -469,7 +513,9 @@ class FractalTree:
             The path to the file where the mesh will be saved.
         """
         try:
-            line = meshio.Mesh(np.array(self.nodes_xyz), [('line', np.array(self.connectivity))])
+            line = meshio.Mesh(
+                np.array(self.nodes_xyz), [("line", np.array(self.connectivity))]
+            )
             line.write(filename)
             logging.info(f"Fractal tree mesh saved to {filename}")
         except Exception as e:
