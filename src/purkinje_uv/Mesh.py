@@ -1,20 +1,72 @@
-# -*- coding: utf-8 -*-
-"""
-This module contains the mesh class. This class is the triangular surface where the fractal tree is grown. 
-"""
-import numpy as np
-from scipy.spatial import cKDTree
 import collections
+import numpy as np
 import meshio
 import scipy.sparse as sp
+from scipy.spatial import cKDTree
 from scipy.sparse.linalg import spsolve
 
-
-
 class Mesh:
-    """Class that contains the mesh where fractal tree is grown. It must be Wavefront .obj file. Be careful on how the normals are defined. It can change where an specified angle will go.
-    
-    
+    """
+    Mesh class for handling 3D triangular surface meshes, supporting geometry, topology, and finite element operations.
+    This class loads a Wavefront .obj file or accepts vertices/connectivity directly, computes triangle normals,
+    builds connectivity structures, and provides methods for geometric queries and finite element calculations.
+        filename (str, optional): Path to the .obj file to load mesh data from.
+        verts (array-like, optional): Vertex coordinates (n_nodes x 3).
+        connectivity (array-like, optional): Triangle connectivity (n_triangles x 3).
+        verts (np.ndarray): Array of vertex coordinates (n_nodes x 3).
+        connectivity (np.ndarray): Array of triangle vertex indices (n_triangles x 3).
+        normals (np.ndarray): Array of triangle normals (n_triangles x 3).
+        node_to_tri (dict): Maps node indices to lists of adjacent triangle indices.
+        tree (scipy.spatial.cKDTree): KD-tree for fast nearest-node queries.
+        centroids (np.ndarray): Triangle centroid coordinates (n_triangles x 3).
+        boundary_edges (list): List of boundary edges as (node1, node2) tuples.
+        uv (np.ndarray): UV coordinates for each node (n_nodes x 2).
+        triareas (np.ndarray): Area of each triangle (n_triangles,).
+        uvscaling (np.ndarray): UV scaling metric per triangle (n_triangles,).
+
+    Methods:
+        loadOBJ(filename):
+            Load mesh data from a Wavefront .obj file.
+        project_new_point(point, verts_to_search=1):
+            Project a point onto the mesh and find the containing triangle.
+        project_point_check(point, node):
+            Project a point onto the surface near a given node and check triangle inclusion.
+        writeVTU(filename, point_data=None, cell_data=None):
+            Export mesh and data to VTU format using meshio.
+        Bmatrix(element):
+            Compute the B matrix and Jacobian for a triangle (finite element method).
+        gradient(element, u):
+            Compute the gradient of a scalar field over a triangle.
+        StiffnessMatrix(B, J):
+            Compute the local stiffness matrix for a triangle.
+        MassMatrix(J):
+            Compute the local mass matrix for a triangle.
+        ForceVector(B, J, X):
+            Compute the local force vector for a triangle.
+        computeGeodesic(nodes, nodeVals, filename=None, K=None, M=None, dt=10.0):
+            Compute geodesic distances from specified nodes using FEM.
+        computeLaplace(nodes, nodeVals, filename=None):
+            Solve Laplace's equation with Dirichlet boundary conditions.
+        computeLaplacian():
+            Assemble global stiffness and mass matrices for the mesh.
+        uvmap(filename=None):
+            Compute UV mapping for the mesh using Laplace's equation.
+        compute_uvscaling():
+            Compute UV scaling metric for each triangle.
+        detect_boundary():
+            Identify boundary edges of the mesh.
+        uv_bc():
+            Generate UV boundary conditions for boundary nodes.
+        compute_triareas():
+            Compute area for each triangle.
+        tri2node_interpolation(cell_field):
+            Interpolate triangle-based field to nodes using area-weighted averaging.
+    Notes:
+        - Mesh must be a valid triangular surface mesh.
+        - Normals are computed per triangle; ensure correct orientation in .obj file.
+        - Some methods require scipy, numpy, and meshio.
+        - Designed for use in fractal tree growth and finite element analysis on surfaces.
+
     Args:    
         filename (str): the path and filename of the .obj file with the mesh.
 
@@ -23,33 +75,70 @@ class Mesh:
         connectivity (array): a numpy array that contains all the connectivity of the triangles of the mesh. connectivity[i,j], where i is the triangle index and j=[0,1,2] is node index.
         normals (array): a numpy array that contains all the normals of the triangles of the mesh. normals[i,j], where i is the triangle index and j=[0,1,2] is normal coordinate (x,y,z).
         node_to_tri (dict): a dictionary that relates a node to the triangles that it is connected. It is the inverse relation of connectivity. The triangles are stored as a list for each node.
-        tree (scipy.spatial.cKDTree): a k-d tree to compute the distance from any point to the closest node in the mesh.
-        
+        tree (scipy.spatial.cKDTree): a k-d tree to compute the distance from any point to the closest node in the mesh. 
     """
-    def __init__(self,filename  = None, verts = None, connectivity = None):
+
+    def __init__(
+        self,
+        filename: str = None,
+        verts: np.ndarray = None,
+        connectivity: np.ndarray = None
+    ):
+        """
+        Initialize the Mesh object.
+
+        Args:
+            filename (str, optional): Path to the .obj file to load mesh data from.
+            verts (np.ndarray, optional): Vertex coordinates (n_nodes x 3).
+            connectivity (np.ndarray, optional): Triangle connectivity (n_triangles x 3).
+
+        Attributes:
+            verts (np.ndarray): Array of vertex coordinates (n_nodes x 3).
+            connectivity (np.ndarray): Array of triangle vertex indices (n_triangles x 3).
+            normals (np.ndarray): Array of triangle normals (n_triangles x 3).
+            node_to_tri (defaultdict): Maps node indices to lists of adjacent triangle indices.
+            tree (scipy.spatial.cKDTree): KD-tree for fast nearest-node queries.
+            centroids (np.ndarray): Triangle centroid coordinates (n_triangles x 3).
+            boundary_edges (list): List of boundary edges as (node1, node2) tuples.
+            uv (np.ndarray): UV coordinates for each node (n_nodes x 2).
+            triareas (np.ndarray): Area of each triangle (n_triangles,).
+            uvscaling (np.ndarray): UV scaling metric per triangle (n_triangles,).
+        """
+        # Load mesh from file if filename is provided
         if filename is not None:
             verts, connectivity = self.loadOBJ(filename)
-        self.verts=np.array(verts)
-        self.connectivity=np.array(connectivity)
-        self.normals=np.zeros(self.connectivity.shape)
-        self.node_to_tri=collections.defaultdict(list)
+        # Store vertices and connectivity as numpy arrays
+        self.verts: np.ndarray = np.array(verts)
+        self.connectivity: np.ndarray = np.array(connectivity)
+        # Initialize normals array for each triangle
+        self.normals: np.ndarray = np.zeros(self.connectivity.shape)
+        # Build node-to-triangle connectivity dictionary
+        self.node_to_tri: collections.defaultdict = collections.defaultdict(list)
         for i in range(len(self.connectivity)):
             for j in range(3):
-                self.node_to_tri[self.connectivity[i,j]].append(i)
-            u=self.verts[self.connectivity[i,1],:]-self.verts[self.connectivity[i,0],:]
-            v=self.verts[self.connectivity[i,2],:]-self.verts[self.connectivity[i,0],:]
-            n=np.cross(u,v)
-            self.normals[i,:]=n/np.linalg.norm(n)
-        self.tree=cKDTree(verts)
-        self.centroids = (self.verts[self.connectivity[:,0],:] + self.verts[self.connectivity[:,1],:] + self.verts[self.connectivity[:,2],:])/3.
-
-        self.boundary_edges = None
-        self.uv = None
-        self.triareas = None
-        self.uvscaling = None
+                self.node_to_tri[self.connectivity[i, j]].append(i)
+            # Compute triangle normal
+            u = self.verts[self.connectivity[i, 1], :] - self.verts[self.connectivity[i, 0], :]
+            v = self.verts[self.connectivity[i, 2], :] - self.verts[self.connectivity[i, 0], :]
+            n = np.cross(u, v)
+            self.normals[i, :] = n / np.linalg.norm(n)
+        # Build KD-tree for fast nearest-node queries
+        self.tree: cKDTree = cKDTree(self.verts)
+        # Compute centroids for each triangle
+        self.centroids: np.ndarray = (
+            self.verts[self.connectivity[:, 0], :] +
+            self.verts[self.connectivity[:, 1], :] +
+            self.verts[self.connectivity[:, 2], :]
+        ) / 3.0
+        # Initialize optional attributes
+        self.boundary_edges: list = None
+        self.uv: np.ndarray = None
+        self.triareas: np.ndarray = None
+        self.uvscaling: np.ndarray = None
         
     def loadOBJ(self,filename):  
-        """This function reads a .obj mesh file
+        """
+        This function reads a .obj mesh file
         
         Args:
             filename (str): the path and filename of the .obj file.
@@ -101,7 +190,6 @@ class Mesh:
         else:
             projected_point, intriangle, r, t = self.project_point_check(point, nodes)
         return projected_point, intriangle, r ,t
-
 
     def project_point_check(self, point, node):
         """This function projects any point to the surface defined by the mesh.
@@ -223,14 +311,15 @@ class Mesh:
         
     def StiffnessMatrix(self,B,J):    
         return np.dot(B.T,B)/(2.*J)
+    
     def MassMatrix(self,J):
        # return np.eye(3)*J/3.
         return np.array([[2.0,1.0,1.0],
                          [1.0,2.0,1.0],
                          [1.0,1.0,2.0]])*J/12
+    
     def ForceVector(self,B,J,X):
         return np.dot(B.T,X)/2.
-        
         
     def computeGeodesic(self, nodes, nodeVals, filename = None, K = None, M = None, dt = 10.0):
         nNodes = self.verts.shape[0]
@@ -334,6 +423,7 @@ class Mesh:
             self.writeVTU(filename, point_data={'u':Tglobal})
             
         return Tglobal
+    
     def computeLaplacian(self):
         nNodes = self.verts.shape[0]
         
@@ -377,8 +467,6 @@ class Mesh:
         if self.uvscaling.min() < 0:
             raise "flipped triangles, check mesh quality"
     
- 
-
     def detect_boundary(self):
         edge_dict =  collections.defaultdict(list)
 
@@ -430,7 +518,6 @@ class Mesh:
             B, J = self.Bmatrix(e)
             self.triareas.append(J/2)
         self.triareas = np.array(self.triareas)
-
 
     def tri2node_interpolation(self, cell_field):
         if self.triareas is None:
