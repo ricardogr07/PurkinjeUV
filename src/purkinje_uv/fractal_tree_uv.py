@@ -227,7 +227,7 @@ class FractalTree:
         sister_branches: dict,
         edge: Edge,
         dx: float,
-        s: float
+        s: float,
     ) -> tuple[bool, np.ndarray]:
         """
         Checks if extending an edge would result in a collision with other nodes, and computes the gradient direction.
@@ -263,7 +263,6 @@ class FractalTree:
         # Compute gradient direction (unit vector)
         grad_dist = (pred_node - nodes[min_index]) / min_dist
         return False, grad_dist
-
 
     def _grow_initial_branch(
         self,
