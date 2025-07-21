@@ -1,11 +1,11 @@
-"""This file provides the implementation of a Purkinje tree using an eikonal solver
-"""
+import numpy as np
 from collections import Counter
 from itertools import chain
-from fimpy.solver import FIMPY
+
 import meshio
+from fimpy.solver import FIMPY
+
 from .vtkutils import *
-import numpy as np
 
 class PurkinjeTree:
     "Class for eikonal solver on Purkinje tree"
@@ -173,28 +173,3 @@ class PurkinjeTree:
         enodes = np.delete(enodes, self.branches[0].nodes[0])
 
         return enodes
-
-if __name__ == "__main__":
-
-    from FractalTreeUV import FractalTree, Parameters 
-    params = Parameters()
-    params.init_node_id = 738
-    params.second_node_id = 210
-    params.l_segment = 0.01
-    params.init_length = 0.3
-    params.length= 0.15
-    params.meshfile = '../data/ellipsoid.obj'
-    params.fascicles_length = [20*params.l_segment, 40*params.l_segment]
-    params.fascicles_angles = [-0.4, 0.5] # in radians
-
-    tree = FractalTree(params)
-
-    tree.grow_tree()
-
-
-    Ptree = PurkinjeTree(np.array(tree.nodes_xyz), np.array(tree.connectivity), np.array(tree.end_nodes))
-    act = Ptree.activate_fim([0],[0.0], return_only_pmj=False)
-    pmj = Ptree.pmj
-    print( act[pmj] )
-
-    Ptree.save("../output/ellipsiod_purkinje_AT.vtu")
