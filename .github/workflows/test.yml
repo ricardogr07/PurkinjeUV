@@ -1,15 +1,31 @@
-name: Test
-on: [push, pull_request]
+name: Build, Lint, and Test
+
+on:
+  pull_request:
+    branches: [main]
+
 jobs:
-  test:
+  tox:
+    name: Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest
+
     strategy:
       matrix:
-        python-version: [3.10, 3.12]
+        python-version: ["3.10.6", "3.12.3"]
+
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - run: pip install tox
-      - run: tox
+
+      - name: Install tox
+        run: pip install tox
+
+      - name: Run tox
+        run: |
+          version=${{ matrix.python-version }}
+          version_nodot=${version//./}
+          tox -e py${version_nodot},lint
