@@ -37,6 +37,7 @@ pip-log.txt
 pip-delete-this-directory.txt
 
 # Unit test / coverage reports
+.vscode/
 htmlcov/
 .tox/
 .nox/
@@ -179,3 +180,6 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+
+# Demo file outputs
+examples/demo_obj/output/
