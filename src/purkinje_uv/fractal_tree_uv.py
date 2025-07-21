@@ -220,6 +220,51 @@ class FractalTree:
         """
         return self._point_in_mesh_vtk(new_node, loc)
 
+    def _collision_check(
+        self,
+        nodes: list[np.ndarray],
+        branches: dict,
+        sister_branches: dict,
+        edge: Edge,
+        dx: float,
+        s: float
+    ) -> tuple[bool, np.ndarray]:
+        """
+        Checks if extending an edge would result in a collision with other nodes, and computes the gradient direction.
+
+        Args:
+            nodes (list): List of current node coordinates.
+            branches (dict): Mapping from branch IDs to node indices.
+            sister_branches (dict): Mapping from a branch ID to its sister.
+            edge (Edge): The current edge to be extended.
+            dx (float): Segment length.
+            s (float): Local scaling factor.
+
+        Returns:
+            Tuple:
+                - collision (bool): Whether the new node would collide with existing ones.
+                - grad_dist (np.ndarray): Gradient direction to push away from nearest node (for repulsion).
+        """
+        pred_node = nodes[edge.n2]  # predicted new point location
+        all_dist = np.linalg.norm(nodes - pred_node, axis=1)
+
+        # Ignore self-branch and sister-branch nodes in collision detection
+        all_dist[branches[edge.branch]] = 1e9
+        if edge.branch in sister_branches:
+            all_dist[branches[sister_branches[edge.branch]]] = 1e9
+
+        min_dist = all_dist.min()
+        min_index = all_dist.argmin()
+
+        # If too close: mark as collision
+        if min_dist < 0.9 * dx * s:
+            return True, None
+
+        # Compute gradient direction (unit vector)
+        grad_dist = (pred_node - nodes[min_index]) / min_dist
+        return False, grad_dist
+
+
     def _grow_initial_branch(
         self,
         edge_queue: List[int],
