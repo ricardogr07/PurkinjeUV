@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/ricardogr07/PurkinjeUV/compare/v0.2.1...v0.2.2) (2025-07-24)
+
+
+### Bug Fixes
+
+* logging ([8a62f02](https://github.com/ricardogr07/PurkinjeUV/commit/8a62f028d93c78e34e323336d6edba7e3450b6e8))
+
 ## [0.2.1](https://github.com/ricardogr07/PurkinjeUV/compare/v0.2.0...v0.2.1) (2025-07-21)
 
 
