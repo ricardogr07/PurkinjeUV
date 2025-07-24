@@ -12,6 +12,7 @@ from utils.vtkutils import vtk_unstructuredgrid_from_list
 
 logger = logging.getLogger(__name__)
 
+
 class PurkinjeTree:
     "Class for eikonal solver on Purkinje tree"
 
@@ -39,8 +40,9 @@ class PurkinjeTree:
         # conduction velocity
         self.cv = 2.5  # [m/s]
 
-        logger.info(f"PurkinjeTree initialized with {self.xyz.shape[0]} nodes and {self.connectivity.shape[0]} edges")
-
+        logger.info(
+            f"PurkinjeTree initialized with {self.xyz.shape[0]} nodes and {self.connectivity.shape[0]} edges"
+        )
 
     def activate_fim(self, x0, x0_vals, return_only_pmj=True):
         "Activate tree with fim-python"
@@ -103,7 +105,7 @@ class PurkinjeTree:
         "Save with meshio"
 
         logger.info(f"Saving PurkinjeTree to meshio format at {fname}")
-        
+
         xyz = self.xyz
         edges = self.extract_edges()
         mesh = meshio.Mesh(points=xyz, cells={"line": edges})

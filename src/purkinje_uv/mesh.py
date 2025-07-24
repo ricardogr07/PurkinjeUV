@@ -8,6 +8,7 @@ from scipy.sparse.linalg import spsolve
 
 logger = logging.getLogger(__name__)
 
+
 class Mesh:
     """
     Mesh class for handling 3D triangular surface meshes, supporting geometry, topology, and finite element operations.
@@ -145,7 +146,9 @@ class Mesh:
         self.triareas: np.ndarray = None
         self.uvscaling: np.ndarray = None
 
-        logger.info(f"Mesh initialized with {self.verts.shape[0]} vertices and {self.connectivity.shape[0]} triangles")
+        logger.info(
+            f"Mesh initialized with {self.verts.shape[0]} vertices and {self.connectivity.shape[0]} triangles"
+        )
 
     def loadOBJ(self, filename):
         """
@@ -180,7 +183,9 @@ class Mesh:
                         con.append(int(w[0]) - 1)
                         numVerts += 1
                     connectivity.append(con)
-        logger.info(f"Loaded OBJ from {filename} with {len(verts)} vertices and {len(connectivity)} triangles")
+        logger.info(
+            f"Loaded OBJ from {filename} with {len(verts)} vertices and {len(connectivity)} triangles"
+        )
         return verts, connectivity
 
     def project_new_point(self, point, verts_to_search=1):
@@ -522,7 +527,9 @@ class Mesh:
             around_nodes.append(nodes[0])
             last_edge = edges[0]
             if len(around_nodes) >= self.verts.shape[0]:
-                logger.error("UV boundary traversal exceeded mesh size — boundary may be broken")
+                logger.error(
+                    "UV boundary traversal exceeded mesh size — boundary may be broken"
+                )
                 raise ValueError("Boundary traversal error in uv_bc()")
 
         lengths = np.cumsum(

@@ -12,6 +12,7 @@ from .mesh import Mesh
 
 logger = logging.getLogger(__name__)
 
+
 class FractalTree:
     """
     FractalTree generates a fractal tree structure within a given mesh domain using UV mapping and geometric rules.
@@ -37,7 +38,7 @@ class FractalTree:
         List of edge connectivity pairs.
     nodes_xyz : List[np.ndarray]
         List of node coordinates in XYZ space.
-        
+
     Methods
     -------
     grow_tree() -> None
