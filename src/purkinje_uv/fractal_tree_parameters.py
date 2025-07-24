@@ -1,6 +1,7 @@
 class Parameters:
     """
     Class to specify the parameters for generating a fractal tree structure.
+
         meshfile (str): Path and filename to the mesh OBJ file.
         init_node_id (int): Index of the initial node in the mesh.
         second_node_id (int): Index of the second node, used to determine the initial direction of the tree.
@@ -12,6 +13,7 @@ class Parameters:
         l_segment (float): Approximate length of segments composing each branch (interpreted as element length in a finite element mesh).
         fascicles_angles (list of float): Angles (in radians) for each fascicle branch, relative to the initial branch.
         fascicles_length (list of float): Lengths for each fascicle branch; must match the size of fascicles_angles.
+        
     Notes:
         - The second_node_id should not be directly connected to init_node_id by a single edge in the mesh to avoid numerical issues.
         - Fascicles are straight branches with different lengths and angles, motivated by the fascicles of the left ventricle.

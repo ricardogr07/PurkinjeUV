@@ -1,10 +1,12 @@
 import collections
+import logging
 import numpy as np
 import meshio
 import scipy.sparse as sp
 from scipy.spatial import cKDTree
 from scipy.sparse.linalg import spsolve
 
+logger = logging.getLogger(__name__)
 
 class Mesh:
     """
@@ -143,6 +145,8 @@ class Mesh:
         self.triareas: np.ndarray = None
         self.uvscaling: np.ndarray = None
 
+        logger.info(f"Mesh initialized with {self.verts.shape[0]} vertices and {self.connectivity.shape[0]} triangles")
+
     def loadOBJ(self, filename):
         """
         This function reads a .obj mesh file
@@ -176,6 +180,7 @@ class Mesh:
                         con.append(int(w[0]) - 1)
                         numVerts += 1
                     connectivity.append(con)
+        logger.info(f"Loaded OBJ from {filename} with {len(verts)} vertices and {len(connectivity)} triangles")
         return verts, connectivity
 
     def project_new_point(self, point, verts_to_search=1):
@@ -479,7 +484,8 @@ class Mesh:
         eigvals, _ = np.linalg.eig(metrics)
         self.uvscaling = (eigvals[:, 0] + eigvals[:, 1]) / 2
         if self.uvscaling.min() < 0:
-            raise "flipped triangles, check mesh quality"
+            logger.error("Flipped triangles detected — check mesh quality")
+            raise ValueError("Flipped triangles detected — check mesh quality")
 
     def detect_boundary(self):
         edge_dict = collections.defaultdict(list)
@@ -516,7 +522,8 @@ class Mesh:
             around_nodes.append(nodes[0])
             last_edge = edges[0]
             if len(around_nodes) >= self.verts.shape[0]:
-                raise "there is a problem with the boundary of the mesh"
+                logger.error("UV boundary traversal exceeded mesh size — boundary may be broken")
+                raise ValueError("Boundary traversal error in uv_bc()")
 
         lengths = np.cumsum(
             np.linalg.norm(
