@@ -530,7 +530,7 @@ class Mesh:
                 logger.error(
                     "UV boundary traversal exceeded mesh size — boundary may be broken"
                 )
-                raise ValueError("Boundary traversal error in uv_bc()")
+                raise ValueError("UV boundary traversal exceeded mesh size — boundary may be broken")
 
         lengths = np.cumsum(
             np.linalg.norm(
