@@ -10,10 +10,13 @@ import vtk
 from .edge import Edge
 from .mesh import Mesh
 
+logger = logging.getLogger(__name__)
+
 
 class FractalTree:
     """
     FractalTree generates a fractal tree structure within a given mesh domain using UV mapping and geometric rules.
+
     Attributes
     m : Mesh
         The mesh object loaded from the provided mesh file.
@@ -35,6 +38,7 @@ class FractalTree:
         List of edge connectivity pairs.
     nodes_xyz : List[np.ndarray]
         List of node coordinates in XYZ space.
+
     Methods
     -------
     grow_tree() -> None
@@ -53,14 +57,12 @@ class FractalTree:
             loc (vtk.vtkCellLocator): VTK cell locator for spatial queries on the mesh.
             scaling_nodes (np.ndarray): Array of node scaling values interpolated from the UV scaling.
             params (Any): Stores the input parameters for later use.
-        Side Effects:
-            - Prints 'computing uv map' to the console.
-            - Builds a VTK cell locator for the mesh.
+
         Raises:
             Any exceptions raised by Mesh, pv.read, or VTK methods will propagate.
         """
         self.mesh = Mesh(params.meshfile)
-        print("computing uv map")
+        logger.info("Computing UV map")
         self.mesh.compute_uvscaling()
 
         self.mesh_uv = Mesh(
@@ -419,7 +421,7 @@ class FractalTree:
             - Assumes existence of Edge class and cKDTree for spatial queries.
         """
         for gen in range(self.params.N_it):
-            print("generation", gen)
+            logger.info(f"Generation {gen}")
             branching_queue = []
             # Branching step
             while edge_queue:
@@ -559,6 +561,6 @@ class FractalTree:
                 np.array(self.nodes_xyz), [("line", np.array(self.connectivity))]
             )
             line.write(filename)
-            logging.info(f"Fractal tree mesh saved to {filename}")
+            logger.info(f"Fractal tree mesh saved to {filename}")
         except Exception as e:
-            logging.error(f"Failed to save fractal tree mesh to {filename}: {e}")
+            logger.error(f"Failed to save fractal tree mesh to {filename}: {e}")

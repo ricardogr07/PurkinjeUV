@@ -1,6 +1,7 @@
 import numpy as np
 from collections import Counter
 from itertools import chain
+import logging
 
 import meshio
 from fimpy.solver import FIMPY
@@ -8,6 +9,8 @@ from fimpy.solver import FIMPY
 import vtk
 from vtkmodules.numpy_interface import dataset_adapter as dsa
 from utils.vtkutils import vtk_unstructuredgrid_from_list
+
+logger = logging.getLogger(__name__)
 
 
 class PurkinjeTree:
@@ -37,8 +40,14 @@ class PurkinjeTree:
         # conduction velocity
         self.cv = 2.5  # [m/s]
 
+        logger.info(
+            f"PurkinjeTree initialized with {self.xyz.shape[0]} nodes and {self.connectivity.shape[0]} edges"
+        )
+
     def activate_fim(self, x0, x0_vals, return_only_pmj=True):
         "Activate tree with fim-python"
+
+        logger.info("Activating Purkinje tree with FIM solver")
 
         xyz = self.xyz
         elm = self.connectivity
@@ -61,6 +70,8 @@ class PurkinjeTree:
     def save(self, fname):
         "Save to VTK"
 
+        logger.info(f"Saving PurkinjeTree to VTK at {fname}")
+
         writer = vtk.vtkXMLUnstructuredGridWriter()
         writer.SetFileName(fname)
         writer.SetInputData(self.vtk_tree)
@@ -68,6 +79,8 @@ class PurkinjeTree:
 
     def save_pmjs(self, fname):
         "Save the junctions as VTP"
+
+        logger.info(f"Saving PMJs to VTP at {fname}")
 
         xyz = self.xyz[self.pmj]
         da = dsa.WrapDataObject(self.vtk_tree)
@@ -90,6 +103,8 @@ class PurkinjeTree:
 
     def save_meshio(self, fname, point_data=None, cell_data=None):
         "Save with meshio"
+
+        logger.info(f"Saving PurkinjeTree to meshio format at {fname}")
 
         xyz = self.xyz
         edges = self.extract_edges()
