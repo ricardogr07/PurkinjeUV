@@ -95,6 +95,7 @@ This package does not attempt to replicate or replace either of the original wor
 
 All intellectual credit for the core algorithms and the geometric methodology belongs to the original authors.
 
+
 ---
 
 ## Maintainer and Modifications
