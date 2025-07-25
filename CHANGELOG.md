@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/ricardogr07/PurkinjeUV/compare/v0.2.2...v0.3.0) (2025-07-25)
+
+
+### Features
+
+* add interactive labeling functionality with PyVista ([e7403e5](https://github.com/ricardogr07/PurkinjeUV/commit/e7403e54ab43e39114058b4ced413272831a876d))
+
 ## [0.2.2](https://github.com/ricardogr07/PurkinjeUV/compare/v0.2.1...v0.2.2) (2025-07-24)
 
 
