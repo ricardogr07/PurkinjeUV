@@ -1,3 +1,6 @@
+from typing import List
+
+
 class Parameters:
     """
     Class to specify the parameters for generating a fractal tree structure.
@@ -20,7 +23,7 @@ class Parameters:
         - To avoid negative branch lengths, ensure randomization parameters are set appropriately.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.meshfile = None
         self.init_node_id = 0
         self.second_node_id = 1
@@ -39,5 +42,5 @@ class Parameters:
         ###########################################
         # Fascicles data
         ###########################################
-        self.fascicles_angles = []  # rad
-        self.fascicles_length = []
+        self.fascicles_angles: List[float] = []  # rad
+        self.fascicles_length: List[float] = []
