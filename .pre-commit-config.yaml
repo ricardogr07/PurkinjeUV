@@ -1,0 +1,39 @@
+default_language_version:
+  python: python3.10
+
+repos:
+  - repo: https://github.com/psf/black
+    rev: 23.9.1
+    hooks:
+      - id: black
+
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    rev: v0.4.0
+    hooks:
+      - id: ruff
+
+  # TODO: Add checks for type hints
+  # - repo: https://github.com/pre-commit/mirrors-mypy
+  #   rev: v1.10.0
+  #   hooks:
+  #     - id: mypy
+  #       pass_filenames: true
+  #       args: [--ignore-missing-imports]
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: check-ast
+      - id: check-docstring-first
+      - id: check-yaml
+
+  # TODO: Add checks for testing
+  # - repo: local
+  #   hooks:
+  #     - id: pytest
+  #       name: run pytest to ensure no broken tests
+  #       entry: pytest --maxfail=1 --disable-warnings -q
+  #       language: python
+  #       additional_dependencies: ["pytest>=7.1,<8.0"]
+  #       pass_filenames: false
+  #       stages: [pre-push]

@@ -26,7 +26,6 @@ class Edge:
         parent: int | None,
         branch: int | None,
     ) -> None:
-
         self.n1 = n1  # ids
         self.n2 = n2  # ids
 

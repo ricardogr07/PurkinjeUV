@@ -475,7 +475,6 @@ class FractalTree:
                 edge_queue = growing_queue
 
     def grow_tree(self):
-
         # Initialization
         branches = defaultdict(list)
         branch_id = 0

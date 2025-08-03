@@ -15,8 +15,9 @@ LABELS = {
     2: ("Pulmonary Veins", "green"),
     3: ("SVC", "yellow"),
     4: ("IVC", "cyan"),
-    5: ("Appendage", "magenta")
+    5: ("Appendage", "magenta"),
 }
+
 
 def prompt_label():
     print("\nAssign a label:")
@@ -30,6 +31,7 @@ def prompt_label():
             print("Invalid label. Try again.")
         except ValueError:
             print("Please enter an integer.")
+
 
 def callback(point, picker):
     point_id = mesh.find_closest_point(point)
@@ -48,17 +50,29 @@ def callback(point, picker):
 
     # Add text showing the point's coords (x, y, z)
     coord_text = f"{coord[0]:.1f}, {coord[1]:.1f}, {coord[2]:.1f}"
-    plotter.add_point_labels(np.array([coord]), [coord_text], point_size=0, font_size=10,
-                             name=f"label_{point_id}", shape_opacity=0)
+    plotter.add_point_labels(
+        np.array([coord]),
+        [coord_text],
+        point_size=0,
+        font_size=10,
+        name=f"label_{point_id}",
+        shape_opacity=0,
+    )
+
 
 # Setup interactive viewer
 plotter = pv.Plotter()
 plotter.add_mesh(mesh, color="white", opacity=0.7)
 plotter.enable_point_picking(callback=callback, use_picker=True, show_message=True)
-plotter.add_text("Right-click to pick a point\nAssign a label in terminal", font_size=10)
+# plotter.add_text("Right-click to pick a point\nAssign a label in terminal", font_size=10)
 plotter.show()
 
 # Optionally save after closing
-np.savetxt("picked_points.csv", np.column_stack([point_labels, picked_points]), 
-           delimiter=",", fmt="%d", header="label,point_id")
+np.savetxt(
+    "picked_points.csv",
+    np.column_stack([point_labels, picked_points]),
+    delimiter=",",
+    fmt="%d",
+    header="label,point_id",
+)
 print("Saved labeled points to picked_points.csv")

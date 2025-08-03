@@ -507,7 +507,6 @@ class Mesh:
         self.boundary_edges = boundary_edges
 
     def uv_bc(self):
-
         if self.boundary_edges is None:
             self.detect_boundary()
 
