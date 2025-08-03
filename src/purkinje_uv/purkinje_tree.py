@@ -4,7 +4,7 @@ from itertools import chain
 import logging
 
 import meshio
-from fimpy.solver import FIMPY
+from fimpy import create_fim_solver
 
 import vtk
 from vtkmodules.numpy_interface import dataset_adapter as dsa
@@ -55,7 +55,7 @@ class PurkinjeTree:
         ve = np.ones(elm.shape[0])
         D = self.cv * np.eye(xyz.shape[1])[np.newaxis] * ve[..., np.newaxis, np.newaxis]
 
-        fim = FIMPY.create_fim_solver(xyz, elm, D, device="cpu")
+        fim = create_fim_solver(xyz, elm, D, device="cpu")
         act = fim.comp_fim(x0, x0_vals)
 
         # update activation in VTK
@@ -157,7 +157,6 @@ class PurkinjeTree:
         return enodes
 
     def extract_pmj_np_unique(self):
-
         t = chain.from_iterable(
             (b.nodes[0], b.nodes[-1])
             for b in self.branches.values()
