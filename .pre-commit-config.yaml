@@ -25,6 +25,14 @@ repos:
       - id: check-ast
       - id: check-docstring-first
       - id: check-yaml
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+
+  - repo: https://github.com/PyCQA/pydocstyle
+    rev: 6.1.1
+    hooks:
+      - id: pydocstyle
+        args: [--convention=google, --add-ignore=D105,D107]
 
   # TODO: Add checks for testing
   # - repo: local
