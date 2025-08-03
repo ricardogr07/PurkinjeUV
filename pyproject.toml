@@ -26,8 +26,8 @@ package-dir = {"" = "src"}
 where = ["src"]
 
 [project.urls]
-"Homepage" = "https://github.com/ricardogr07/PurkinjeUV/"
-"Repository" = "https://github.com/ricardogr07/PurkinjeUV/"
+"Homepage" = "https://github.com/ricardogr07/purkinje-uv/"
+"Repository" = "https://github.com/ricardogr07/purkinje-uv/"
 
 [tool.black]
 line-length = 88
