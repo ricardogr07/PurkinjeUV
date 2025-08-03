@@ -52,7 +52,7 @@ add-ignore = ["D104", "D105", "D107"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
-addopts = "--cov=myocardial_mesh --cov-fail-under=80 -ra -q"
+addopts = "--cov=purkinje_uv --cov-fail-under=80 -ra -q"
 testpaths  = ["tests"]
 
 [tool.tox]
