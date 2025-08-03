@@ -32,7 +32,10 @@ repos:
     rev: 6.1.1
     hooks:
       - id: pydocstyle
-        args: [--convention=google, --add-ignore=D105,D107]
+        additional_dependencies: ["toml"]
+        args:
+          - --convention=google
+          - --add-ignore=D105,D107
 
   # TODO: Add checks for testing
   # - repo: local
