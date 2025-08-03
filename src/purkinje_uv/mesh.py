@@ -1,5 +1,8 @@
 import collections
 import logging
+from typing import Any, Optional, List, Dict, Tuple, Sequence, DefaultDict
+from numpy.typing import NDArray
+
 import numpy as np
 import meshio
 import scipy.sparse as sp
@@ -82,12 +85,23 @@ class Mesh:
         tree (scipy.spatial.cKDTree): a k-d tree to compute the distance from any point to the closest node in the mesh.
     """
 
+    verts: NDArray[Any]
+    connectivity: NDArray[Any]
+    normals: NDArray[Any]
+    node_to_tri: DefaultDict[int, List[int]]
+    tree: cKDTree
+    centroids: NDArray[Any]
+    boundary_edges: Optional[List[Tuple[int, int]]]
+    uv: Optional[NDArray[Any]]
+    triareas: Optional[NDArray[Any]]
+    uvscaling: Optional[NDArray[Any]]
+
     def __init__(
         self,
-        filename: str = None,
-        verts: np.ndarray = None,
-        connectivity: np.ndarray = None,
-    ):
+        filename: Optional[str] = None,
+        verts: Optional[NDArray[Any]] = None,
+        connectivity: Optional[NDArray[Any]] = None,
+    ) -> None:
         """
         Initialize the Mesh object.
 
@@ -111,16 +125,20 @@ class Mesh:
         # Load mesh from file if filename is provided
         if filename is not None:
             verts, connectivity = self.loadOBJ(filename)
-        # Store vertices and connectivity as numpy arrays
-        self.verts: np.ndarray = np.array(verts)
-        self.connectivity: np.ndarray = np.array(connectivity)
-        # Initialize normals array for each triangle
-        self.normals: np.ndarray = np.zeros(self.connectivity.shape)
+
+        # Store verts & connectivity as NumPy arrays
+        self.verts: NDArray[Any] = np.array(verts)
+        self.connectivity: NDArray[Any] = np.array(connectivity)
+
+        # Compute triangle normals
+        self.normals: NDArray[Any] = np.zeros(self.connectivity.shape)
+
         # Build node-to-triangle connectivity dictionary
-        self.node_to_tri: collections.defaultdict = collections.defaultdict(list)
-        for i in range(len(self.connectivity)):
+        self.node_to_tri: DefaultDict[int, List[int]] = collections.defaultdict(list)
+        for i in range(self.connectivity.shape[0]):
             for j in range(3):
                 self.node_to_tri[self.connectivity[i, j]].append(i)
+
             # Compute triangle normal
             u = (
                 self.verts[self.connectivity[i, 1], :]
@@ -132,25 +150,28 @@ class Mesh:
             )
             n = np.cross(u, v)
             self.normals[i, :] = n / np.linalg.norm(n)
+
         # Build KD-tree for fast nearest-node queries
         self.tree: cKDTree = cKDTree(self.verts)
+
         # Compute centroids for each triangle
-        self.centroids: np.ndarray = (
+        self.centroids: NDArray[Any] = (
             self.verts[self.connectivity[:, 0], :]
             + self.verts[self.connectivity[:, 1], :]
             + self.verts[self.connectivity[:, 2], :]
         ) / 3.0
+
         # Initialize optional attributes
-        self.boundary_edges: list = None
-        self.uv: np.ndarray = None
-        self.triareas: np.ndarray = None
-        self.uvscaling: np.ndarray = None
+        self.boundary_edges: Optional[List[Tuple[int, int]]] = None
+        self.uv: Optional[NDArray[Any]] = None
+        self.triareas: Optional[NDArray[Any]] = None
+        self.uvscaling: Optional[NDArray[Any]] = None
 
         logger.info(
             f"Mesh initialized with {self.verts.shape[0]} vertices and {self.connectivity.shape[0]} triangles"
         )
 
-    def loadOBJ(self, filename):
+    def loadOBJ(self, filename: str) -> Tuple[NDArray[Any], NDArray[Any]]:
         """
         This function reads a .obj mesh file
 
@@ -161,10 +182,12 @@ class Mesh:
              verts (array): a numpy array that contains all the nodes of the mesh. verts[i,j], where i is the node index and j=[0,1,2] is the coordinate (x,y,z).
              connectivity (array): a numpy array that contains all the connectivity of the triangles of the mesh. connectivity[i,j], where i is the triangle index and j=[0,1,2] is node index.
         """
-        numVerts = 0
-        verts = []
-        norms = []
-        connectivity = []
+        numVerts: int = 0
+        verts: list[list[float]] = []
+        # norms is parsed but unused; kept here for completeness
+        norms: list[list[float]] = []
+        connectivity: list[list[int]] = []
+
         for line in open(filename, "r"):
             vals = line.split()
             if len(vals) > 0:
@@ -186,9 +209,16 @@ class Mesh:
         logger.info(
             f"Loaded OBJ from {filename} with {len(verts)} vertices and {len(connectivity)} triangles"
         )
-        return verts, connectivity
 
-    def project_new_point(self, point, verts_to_search=1):
+        verts_arr: NDArray[Any] = np.array(verts, dtype=float)
+        connectivity_arr: NDArray[Any] = np.array(connectivity, dtype=int)
+        return verts_arr, connectivity_arr
+
+    def project_new_point(
+        self,
+        point: NDArray[Any],
+        verts_to_search: int = 1,
+    ) -> Tuple[NDArray[Any], int, float, float]:
         """This function receives a triangle and project it on the mesh in order to get the index of the triangle where
         the projected point lies
 
@@ -198,19 +228,28 @@ class Mesh:
         Returns:
              intriangle (int): the index of the triangle where the projected point lies. If the point is outside surface, intriangle=-1.
         """
-        d, nodes = self.tree.query(point, verts_to_search)
+
+        _, idxs = self.tree.query(point, verts_to_search)
         if verts_to_search > 1:
-            for node in nodes:
+            for node_idx in idxs:
+                node_int: int = int(node_idx)
                 projected_point, intriangle, r, t = self.project_point_check(
-                    point, node
+                    point, node_int
                 )
                 if intriangle != -1:
                     return projected_point, intriangle, r, t
         else:
-            projected_point, intriangle, r, t = self.project_point_check(point, nodes)
+            node_int = int(idxs)
+            projected_point, intriangle, r, t = self.project_point_check(
+                point, node_int
+            )
         return projected_point, intriangle, r, t
 
-    def project_point_check(self, point, node):
+    def project_point_check(
+        self,
+        point: NDArray[Any],
+        node: int,
+    ) -> Tuple[NDArray[Any], int, float, float]:
         """This function projects any point to the surface defined by the mesh.
 
         Args:
@@ -220,72 +259,113 @@ class Mesh:
              projected_point (array): the coordinates of the projected point that lies in the surface.
              intriangle (int): the index of the triangle where the projected point lies. If the point is outside surface, intriangle=-1.
         """
-        # Get the closest point
-        # d, node=self.tree.query(point)
-        # print d, node
-        # Get triangles connected to that node
-        triangles = self.node_to_tri[node]
-        # print triangles
-        # Compute the vertex normal as the avergage of the triangle normals.
-        vertex_normal = np.sum(self.normals[triangles], axis=0)
-        # Normalize
+        # Print closest point info in debug mode
+        if logger.isEnabledFor(logging.DEBUG):
+            d, node_idx = self.tree.query(point)
+            logger.debug(f"Closest distance: {d}, Closest node: {node_idx}")
+
+        # Get triangles list connected to that node
+        triangles_list: List[int] = self.node_to_tri[node]
+        logger.debug(f"Node {node} is connected to triangles: {triangles_list}")
+
+        # Compute the vertex normal as the average of the triangle normals.
+        vertex_normal: NDArray[Any] = np.sum(self.normals[triangles_list, :], axis=0)
         vertex_normal = vertex_normal / np.linalg.norm(vertex_normal)
+
         # Project to the point to the closest vertex plane
-        pre_projected_point = point - vertex_normal * np.dot(
-            point - self.verts[node], vertex_normal
+        vec_to_vertex: NDArray[Any] = point - self.verts[node]
+        distance_along_normal: float = float(np.dot(vec_to_vertex, vertex_normal))
+        pre_projected_point: NDArray[Any] = (
+            point - vertex_normal * distance_along_normal
         )
+
         # Calculate the distance from point to plane (Closest point projection)
-        CPP = []
-        for tri in triangles:
-            CPP.append(
+        CPP: List[float] = []
+        for tri in triangles_list:
+            val: float = float(
                 np.dot(
                     pre_projected_point - self.verts[self.connectivity[tri, 0], :],
                     self.normals[tri, :],
                 )
             )
-        CPP = np.array(CPP)
-        #   print 'CPP=',CPP
-        triangles = np.array(triangles)
+            CPP.append(val)
+        CPP_arr: NDArray[Any] = np.array(CPP, dtype=float)
+
+        logger.debug(f"CPP={CPP}")
+
+        triangles_arr: NDArray[Any] = np.array(triangles_list, dtype=int)
+
         # Sort from closest to furthest
-        order = np.abs(CPP).argsort()
-        # print CPP[order]
+        order: NDArray[Any] = np.abs(CPP_arr).argsort()
+        logger.debug(f"CPP sorted: {CPP_arr[order]}")
+
         # Check if point is in triangle
-        intriangle = -1
+        intriangle: int = -1
+        projected_point: NDArray[Any] = pre_projected_point
+        r: float = -1.0
+        t: float = -1.0
+
         for o in order:
-            i = triangles[o]
-            #      print i
-            projected_point = pre_projected_point - CPP[o] * self.normals[i, :]
-            #      print projected_point
-            u = (
-                self.verts[self.connectivity[i, 1], :]
-                - self.verts[self.connectivity[i, 0], :]
+            idx: int = int(o)
+            tri_idx: int = int(triangles_arr[idx])
+
+            projected_pt: NDArray[Any] = (
+                pre_projected_point - CPP_arr[idx] * self.normals[tri_idx, :]
             )
-            v = (
-                self.verts[self.connectivity[i, 2], :]
-                - self.verts[self.connectivity[i, 0], :]
+
+            u: NDArray[Any] = (
+                self.verts[self.connectivity[tri_idx, 1], :]
+                - self.verts[self.connectivity[tri_idx, 0], :]
             )
-            w = projected_point - self.verts[self.connectivity[i, 0], :]
-            #     print 'check ortogonality',np.dot(w,self.normals[i,:])
-            vxw = np.cross(v, w)
-            vxu = np.cross(v, u)
-            uxw = np.cross(u, w)
-            sign_r = np.dot(vxw, vxu)
-            sign_t = np.dot(uxw, -vxu)
-            r = t = -1
-            #    print sign_r,sign_t
+
+            v: NDArray[Any] = (
+                self.verts[self.connectivity[tri_idx, 2], :]
+                - self.verts[self.connectivity[tri_idx, 0], :]
+            )
+
+            w: NDArray[Any] = (
+                projected_pt - self.verts[self.connectivity[tri_idx, 0], :]
+            )
+
+            logger.debug(
+                f"Check orthogonality: np.dot(w, self.normals[{tri_idx}, :]) = "
+                f"{np.dot(w, self.normals[tri_idx, :])}"
+            )
+
+            vxw: NDArray[Any] = np.cross(v, w)
+            vxu: NDArray[Any] = np.cross(v, u)
+            uxw: NDArray[Any] = np.cross(u, w)
+            sign_r: float = float(np.dot(vxw, vxu))
+            sign_t: float = float(np.dot(uxw, -vxu))
+
+            logger.debug(f"sign_r={sign_r}, sign_t={sign_t}")
+
             if sign_r >= 0 and sign_t >= 0:
-                r = np.linalg.norm(vxw) / np.linalg.norm(vxu)
-                t = np.linalg.norm(uxw) / np.linalg.norm(vxu)
-                #   print 'sign ok', r , t
+                r = float(np.linalg.norm(vxw) / np.linalg.norm(vxu))
+                t = float(np.linalg.norm(uxw) / np.linalg.norm(vxu))
+
+                logger.debug(f"Sign ok: r={r}, t={t}")
+
                 if r <= 1 and t <= 1 and (r + t) <= 1.001:
-                    #      print 'in triangle',i
-                    intriangle = i
+                    logger.debug(f"In triangle {tri_idx}")
+                    intriangle = tri_idx
+                    projected_point = projected_pt
                     break
         return projected_point, intriangle, r, t
 
-    def writeVTU(self, filename, point_data=None, cell_data=None):
-        cells = [("triangle", self.connectivity)]
+    def writeVTU(
+        self,
+        filename: str,
+        point_data: Optional[Dict[str, NDArray[Any]]] = None,
+        cell_data: Optional[Dict[str, NDArray[Any]]] = None,
+    ) -> None:
+        """
+        Export this mesh (and optional point/cell data) in VTU format.
+        """
+        # Define cells for meshio: (cell_type, connectivity array)
+        cells: List[Tuple[str, NDArray[Any]]] = [("triangle", self.connectivity)]
         m_out = meshio.Mesh(self.verts, cells)
+
         if point_data is not None:
             m_out.point_data = point_data
         if cell_data is not None:
@@ -293,127 +373,172 @@ class Mesh:
 
         m_out.write(filename)
 
-    def Bmatrix(self, element):
-        nodeCoords = self.verts[self.connectivity[element]]
-        e1 = (nodeCoords[1, :] - nodeCoords[0, :]) / np.linalg.norm(
-            nodeCoords[1, :] - nodeCoords[0, :]
-        )
-        e2 = (nodeCoords[2, :] - nodeCoords[0, :]) - np.dot(
-            (nodeCoords[2, :] - nodeCoords[0, :]), e1
-        ) * e1
-        e2 = e2 / np.linalg.norm(e2)  # normalize
+    def Bmatrix(self, element: int) -> Tuple[NDArray[Any], float]:
+        """
+        Compute the B‐matrix and determinant J for triangle `element`.
+        """
+        # Extract vertex coordinates for this triangle
+        nodeCoords: NDArray[Any] = self.verts[self.connectivity[element]]
 
-        x21 = np.dot(nodeCoords[1, :] - nodeCoords[0, :], e1)
-        x13 = np.dot(nodeCoords[0, :] - nodeCoords[2, :], e1)
-        x32 = np.dot(nodeCoords[2, :] - nodeCoords[1, :], e1)
+        # Build local orthonormal frame (e1, e2)
+        edge21: NDArray[Any] = nodeCoords[1, :] - nodeCoords[0, :]
+        e1: NDArray[Any] = edge21 / np.linalg.norm(edge21)
 
-        y23 = np.dot(nodeCoords[1, :] - nodeCoords[2, :], e2)
-        y31 = np.dot(nodeCoords[2, :] - nodeCoords[0, :], e2)
-        y12 = np.dot(nodeCoords[0, :] - nodeCoords[1, :], e2)
+        temp: NDArray[Any] = nodeCoords[2, :] - nodeCoords[0, :]
+        proj: float = float(np.dot(temp, e1))
+        perp: NDArray[Any] = temp - proj * e1
+        e2: NDArray[Any] = perp / np.linalg.norm(perp)
 
-        J = x13 * y23 - y31 * x32
+        # Compute scalar edge projections
+        x21: float = float(np.dot(edge21, e1))
+        x13: float = float(np.dot(nodeCoords[0, :] - nodeCoords[2, :], e1))
+        x32: float = float(np.dot(nodeCoords[2, :] - nodeCoords[1, :], e1))
 
-        B = np.array([[y23, y31, y12], [x32, x13, x21]])
+        y23: float = float(np.dot(nodeCoords[1, :] - nodeCoords[2, :], e2))
+        y31: float = float(np.dot(nodeCoords[2, :] - nodeCoords[0, :], e2))
+        y12: float = float(np.dot(nodeCoords[0, :] - nodeCoords[1, :], e2))
+
+        # Compute Jacobian (twice the triangle area)
+        J: float = x13 * y23 - y31 * x32
+
+        # Assemble B‐matrix
+        B: NDArray[Any] = np.array([[y23, y31, y12], [x32, x13, x21]], dtype=float)
 
         return B, J
 
-    def gradient(self, element, u):
-        nodeCoords = self.verts[self.connectivity[element]]
-        e1 = (nodeCoords[1, :] - nodeCoords[0, :]) / np.linalg.norm(
-            nodeCoords[1, :] - nodeCoords[0, :]
+    def gradient(self, element: int, u: NDArray[Any]) -> NDArray[Any]:
+        """
+        Compute the gradient of a scalar field over triangle `element`.
+        """
+        node_coords: NDArray[Any] = self.verts[self.connectivity[element]]
+        edge_vec: NDArray[Any] = node_coords[1, :] - node_coords[0, :]
+        e1: NDArray[Any] = edge_vec / np.linalg.norm(edge_vec)
+
+        temp: NDArray[Any] = node_coords[2, :] - node_coords[0, :]
+        proj: float = float(np.dot(temp, e1))
+        perp: NDArray[Any] = temp - proj * e1
+        e2: NDArray[Any] = perp / np.linalg.norm(perp)
+
+        e3: NDArray[Any] = np.cross(e1, e2)
+
+        x21: float = float(np.dot(edge_vec, e1))
+        x13: float = float(np.dot(node_coords[0, :] - node_coords[2, :], e1))
+        x32: float = float(np.dot(node_coords[2, :] - node_coords[1, :], e1))
+
+        y23: float = float(np.dot(node_coords[1, :] - node_coords[2, :], e2))
+        y31: float = float(np.dot(node_coords[2, :] - node_coords[0, :], e2))
+        y12: float = float(np.dot(node_coords[0, :] - node_coords[1, :], e2))
+
+        J: float = x13 * y23 - y31 * x32
+        B: NDArray[Any] = np.array([[y23, y31, y12], [x32, x13, x21]], dtype=float)
+
+        grad: NDArray[Any] = np.zeros(3, dtype=float)
+        grad_vals: NDArray[Any] = np.dot(B, u) / J
+        grad[:2] = grad_vals
+
+        R: NDArray[Any] = np.vstack((e1, e2, e3)).T
+        result: NDArray[Any] = np.dot(R, grad)
+        return result
+
+    def StiffnessMatrix(self, B: NDArray[Any], J: float) -> NDArray[Any]:
+        """
+        Compute the local stiffness matrix for a triangle.
+        """
+        result: NDArray[Any] = np.dot(B.T, B) / (2.0 * J)
+        return result
+
+    def MassMatrix(self, J: float) -> NDArray[Any]:
+        """
+        Compute the local mass matrix for a triangle.
+        """
+        result: NDArray[Any] = (
+            np.array([[2.0, 1.0, 1.0], [1.0, 2.0, 1.0], [1.0, 1.0, 2.0]], dtype=float)
+            * J
+            / 12
         )
-        e2 = (nodeCoords[2, :] - nodeCoords[0, :]) - np.dot(
-            (nodeCoords[2, :] - nodeCoords[0, :]), e1
-        ) * e1
-        e2 = e2 / np.linalg.norm(e2)  # normalize
-        e3 = np.cross(e1, e2)
+        return result
 
-        x21 = np.dot(nodeCoords[1, :] - nodeCoords[0, :], e1)
-        x13 = np.dot(nodeCoords[0, :] - nodeCoords[2, :], e1)
-        x32 = np.dot(nodeCoords[2, :] - nodeCoords[1, :], e1)
+    def ForceVector(
+        self,
+        B: NDArray[Any],
+        J: float,
+        X: NDArray[Any],
+    ) -> NDArray[Any]:
+        """
+        Compute the local force vector for a triangle.
+        """
+        result: NDArray[Any] = np.dot(B.T, X) / 2.0
+        return result
 
-        y23 = np.dot(nodeCoords[1, :] - nodeCoords[2, :], e2)
-        y31 = np.dot(nodeCoords[2, :] - nodeCoords[0, :], e2)
-        y12 = np.dot(nodeCoords[0, :] - nodeCoords[1, :], e2)
-
-        B = np.array([[y23, y31, y12], [x32, x13, x21]])
-        J = x13 * y23 - y31 * x32
-
-        grad = np.zeros(3)
-        grad[:2] = np.dot(B, u) / J
-
-        R = np.vstack((e1, e2, e3)).T
-        # Rinv = np.linalg.inv(R)
-
-        return np.dot(R, grad)
-
-    def StiffnessMatrix(self, B, J):
-        return np.dot(B.T, B) / (2.0 * J)
-
-    def MassMatrix(self, J):
-        # return np.eye(3)*J/3.
-        return np.array([[2.0, 1.0, 1.0], [1.0, 2.0, 1.0], [1.0, 1.0, 2.0]]) * J / 12
-
-    def ForceVector(self, B, J, X):
-        return np.dot(B.T, X) / 2.0
-
-    def computeGeodesic(self, nodes, nodeVals, filename=None, K=None, M=None, dt=10.0):
-        nNodes = self.verts.shape[0]
-        nElem = self.connectivity.shape[0]
+    def computeGeodesic(
+        self,
+        nodes: Sequence[int],
+        nodeVals: Sequence[float],
+        filename: Optional[str] = None,
+        K: Optional[sp.spmatrix] = None,
+        M: Optional[sp.spmatrix] = None,
+        dt: float = 10.0,
+    ) -> Tuple[NDArray[Any], NDArray[Any]]:
+        """
+        Compute geodesic distances from `nodes` with prescribed `nodeVals`
+        using FEM. Returns (ATglobal, Xs), where ATglobal is length-nNodes
+        and Xs is (nElem x 3) array of element gradients.
+        """
+        nNodes: int = self.verts.shape[0]
+        nElem: int = self.connectivity.shape[0]
 
         #        K = sp.lil_matrix((nNodes, nNodes))
         #        M = sp.lil_matrix((nNodes, nNodes))
 
-        F = np.zeros((nNodes, 1))
-
-        u0 = np.zeros((nNodes, 1))
-
+        F: NDArray[Any] = np.zeros((nNodes, 1), dtype=float)
+        u0: NDArray[Any] = np.zeros((nNodes, 1), dtype=float)
         u0[nodes] = 1e6
 
         # dt = 10.0
 
         if (K is None) or (M is None):
-            K = np.zeros((nNodes, nNodes))
-            M = np.zeros((nNodes, nNodes))
+            K = np.zeros((nNodes, nNodes), dtype=float)
+            M = np.zeros((nNodes, nNodes), dtype=float)
             for el, tri in enumerate(self.connectivity):
                 j, i = np.meshgrid(tri, tri)
                 B, J = self.Bmatrix(el)
-                k = self.StiffnessMatrix(B, J)
-                m = self.MassMatrix(J)
-                K[i, j] += k
-                M[i, j] += m
+                k_mat = self.StiffnessMatrix(B, J)
+                m_mat = self.MassMatrix(J)
+                K[i, j] += k_mat
+                M[i, j] += m_mat
 
-        activeNodes = list(range(nNodes))
+        activeNodes: List[int] = list(range(nNodes))
         for known in nodes:
             activeNodes.remove(known)
 
         jActive, iActive = np.meshgrid(activeNodes, activeNodes)
-
         jKnown, iKnown = np.meshgrid(nodes, activeNodes)
 
-        A1 = sp.csr.csr_matrix(M + dt * K)
-        u = spsolve(A1, u0)[:, None]
+        A1: sp.spmatrix = sp.csr.csr_matrix(M + dt * K)
+        u: NDArray[Any] = spsolve(A1, u0)[:, None]
         #  u = np.linalg.solve(M + dt*K,u0)
 
-        Xs = np.zeros((nElem, 3))
-        Js = np.zeros((nElem, 1))
+        Xs: NDArray[Any] = np.zeros((nElem, 3), dtype=float)
+        Js: NDArray[Any] = np.zeros((nElem, 1), dtype=float)
 
         for k, tri in enumerate(self.connectivity):
             j, i = np.meshgrid(tri, tri)
             B, J = self.Bmatrix(k)
             Js[k] = J
-            X = self.gradient(k, u[tri, 0])
+            X: NDArray[Any] = self.gradient(k, u[tri, 0])
             Xs[k, :] = X / np.linalg.norm(X)
-            Xnr = np.dot(B, u[tri, 0])  # not rotated
+            Xnr: NDArray[Any] = np.dot(B, u[tri, 0])
             Xnr /= np.linalg.norm(Xnr)
-            f = self.ForceVector(B, J, Xnr)
+            f: NDArray[Any] = self.ForceVector(B, J, Xnr)
             F[tri, 0] -= f
-        A2 = sp.csr.csr_matrix(K[iActive, jActive])
-        AT = spsolve(A2, F[activeNodes, 0] - np.dot(K[iKnown, jKnown], nodeVals))
+
+        A2: sp.spmatrix = sp.csr.csr_matrix(K[iActive, jActive])
+        AT: NDArray[Any] = spsolve(
+            A2, F[activeNodes, 0] - np.dot(K[iKnown, jKnown], nodeVals)
+        )
         #  AT = np.linalg.solve(K[iActive, jActive],F[activeNodes,0]-np.dot(K[iKnown, jKnown],nodeVals))
 
-        ATglobal = np.zeros(nNodes)
-
+        ATglobal: NDArray[Any] = np.zeros(nNodes, dtype=float)
         ATglobal[activeNodes] = AT
         ATglobal[nodes] = nodeVals
 
@@ -422,26 +547,42 @@ class Mesh:
 
         return ATglobal, Xs
 
-    def computeLaplace(self, nodes, nodeVals, filename=None):
+    def computeLaplace(
+        self,
+        nodes: Sequence[int],
+        nodeVals: Sequence[float] | NDArray[Any],
+        filename: Optional[str] = None,
+    ) -> NDArray[Any]:
+        """
+        Solve Laplace's equation with Dirichlet boundary conditions at `nodes`.
+        """
         nNodes = self.verts.shape[0]
 
+        K: sp.spmatrix
+        M: sp.spmatrix
         K, M = self.computeLaplacian()
-        F = np.zeros((nNodes, 1))
 
-        activeNodes = list(range(nNodes))
+        F: NDArray[Any] = np.zeros((nNodes, 1), dtype=float)
+
+        activeNodes: List[int] = list(range(nNodes))
+
         for known in nodes:
             activeNodes.remove(known)
 
+        jActive: NDArray[Any]
+        iActive: NDArray[Any]
         jActive, iActive = np.meshgrid(activeNodes, activeNodes)
 
+        jKnown: NDArray[Any]
+        iKnown: NDArray[Any]
         jKnown, iKnown = np.meshgrid(nodes, activeNodes)
 
-        T = spsolve(
-            K[iActive, jActive], F[activeNodes, 0] - K[iKnown, jKnown].dot(nodeVals)
+        T: NDArray[Any] = spsolve(
+            K[iActive, jActive],
+            F[activeNodes, 0] - K[iKnown, jKnown].dot(nodeVals),
         )
 
-        Tglobal = np.zeros(nNodes)
-
+        Tglobal: NDArray[Any] = np.zeros(nNodes, dtype=float)
         Tglobal[activeNodes] = T
         Tglobal[nodes] = nodeVals
 
@@ -450,80 +591,128 @@ class Mesh:
 
         return Tglobal
 
-    def computeLaplacian(self):
-        nNodes = self.verts.shape[0]
+    def computeLaplacian(self) -> Tuple[sp.spmatrix, sp.spmatrix]:
+        """
+        Assemble and return the global stiffness (K) and mass (M) matrices
+        for the entire mesh as CSR sparse matrices.
+        """
 
-        K = sp.lil_matrix((nNodes, nNodes))
-        M = sp.lil_matrix((nNodes, nNodes))
+        nNodes: int = self.verts.shape[0]
 
-        for k, tri in enumerate(self.connectivity):
+        K: sp.spmatrix = sp.lil_matrix((nNodes, nNodes))
+        M: sp.spmatrix = sp.lil_matrix((nNodes, nNodes))
+
+        for elem_idx, tri in enumerate(self.connectivity):
+            j: NDArray[Any]
+            i: NDArray[Any]
             j, i = np.meshgrid(tri, tri)
-            B, J = self.Bmatrix(k)
-            k = self.StiffnessMatrix(B, J)
-            K[i, j] += k
-            m = self.MassMatrix(J)
-            M[i, j] += m
+
+            B: NDArray[Any]
+            J: float
+            B, J = self.Bmatrix(elem_idx)
+
+            K_local: NDArray[Any] = self.StiffnessMatrix(B, J)
+            K[i, j] += K_local
+
+            M_local: NDArray[Any] = self.MassMatrix(J)
+            M[i, j] += M_local
 
         return K.tocsr(), M.tocsr()
 
-    def uvmap(self, filename=None):
-        # this is only for meshes with one hole
+    def uvmap(self, filename: Optional[str] = None) -> None:
+        """
+        Compute and store UV mapping for the mesh. Optionally export to VTU.
+        """
+
+        around_nodes: list[int]
+        bc_u: NDArray[Any]
+        bc_v: NDArray[Any]
         around_nodes, bc_u, bc_v = self.uv_bc()
-        u = self.computeLaplace(around_nodes[:-1], bc_u)
-        v = self.computeLaplace(around_nodes[:-1], bc_v)
+
+        u: NDArray[Any] = self.computeLaplace(around_nodes[:-1], bc_u)
+        v: NDArray[Any] = self.computeLaplace(around_nodes[:-1], bc_v)
 
         if filename is not None:
-            self.writeVTU(point_data={"u": u, "v": v})
-        uv = np.vstack([u, v]).T
-        self.uv = uv
+            self.writeVTU(filename, point_data={"u": u, "v": v})
+        uv_arr: NDArray[Any] = np.vstack([u, v]).T
+        self.uv = uv_arr
 
-    def compute_uvscaling(self):
+    def compute_uvscaling(self) -> None:
+        """
+        Compute UV‐scaling metric per triangle and store in self.uvscaling.
+        Raises if any triangle appears flipped (negative scaling).
+        """
         if self.uv is None:
             self.uvmap()
-        metrics = []
+        assert self.uv is not None
+
+        metrics: List[NDArray[Any]] = []
+
         for e in range(self.connectivity.shape[0]):
             B, J = self.Bmatrix(e)
-            uv_e = self.uv[self.connectivity[e]]
-            F = np.matmul(B, uv_e) / J
+            uv_e: NDArray[Any] = self.uv[self.connectivity[e]]
+            F: NDArray[Any] = np.matmul(B, uv_e) / J
             metrics.append(np.matmul(F.T, F))
+
         eigvals, _ = np.linalg.eig(metrics)
-        self.uvscaling = (eigvals[:, 0] + eigvals[:, 1]) / 2
-        if self.uvscaling.min() < 0:
+        uvscale_arr: NDArray[Any] = (eigvals[:, 0] + eigvals[:, 1]) / 2
+        self.uvscaling = uvscale_arr
+
+        if uvscale_arr.min() < 0:
             logger.error("Flipped triangles detected — check mesh quality")
             raise ValueError("Flipped triangles detected — check mesh quality")
 
-    def detect_boundary(self):
-        edge_dict = collections.defaultdict(list)
+    def detect_boundary(self) -> None:
+        """
+        Identify boundary edges: edges belonging to exactly one triangle.
+        Stores result in self.boundary_edges as a list of (node1, node2) tuples.
+        """
+        edge_dict: DefaultDict[Tuple[int, int], List[int]] = collections.defaultdict(
+            list
+        )
 
-        for e, el in enumerate(self.connectivity):
-            for edge in [[0, 1], [1, 2], [2, 0]]:
-                edge_dict[(min(el[edge]), max(el[edge]))].append(e)
-        boundary_edges = []
+        for tri_idx, el in enumerate(self.connectivity):
+            for offset in ((0, 1), (1, 2), (2, 0)):
+                n1, n2 = el[offset[0]], el[offset[1]]
+                edge_key: Tuple[int, int] = (min(n1, n2), max(n1, n2))
+                edge_dict[edge_key].append(tri_idx)
 
-        for edge, tris in edge_dict.items():
+        boundary_edges: List[Tuple[int, int]] = []
+
+        for edge_key, tris in edge_dict.items():
             if len(tris) == 1:
-                boundary_edges.append(edge)
+                boundary_edges.append(edge_key)
 
         self.boundary_edges = boundary_edges
 
-    def uv_bc(self):
+    def uv_bc(self) -> Tuple[List[int], NDArray[Any], NDArray[Any]]:
+        """
+        Generate UV boundary traversal and boundary conditions.
+
+        Returns:
+          around_nodes: List of node indices tracing the boundary loop.
+          bc_u, bc_v: Arrays of boundary condition values for u and v.
+        """
         if self.boundary_edges is None:
             self.detect_boundary()
+        assert self.boundary_edges is not None
 
-        boundary_node2edge = collections.defaultdict(list)
+        boundary_node2edge: DefaultDict[
+            int, List[Tuple[int, int]]
+        ] = collections.defaultdict(list)
         for edge in self.boundary_edges:
             boundary_node2edge[edge[0]].append(edge)
             boundary_node2edge[edge[1]].append(edge)
 
-        around_nodes = list(self.boundary_edges[0])
-        last_edge = self.boundary_edges[0]
+        around_nodes: List[int] = list(self.boundary_edges[0])
+        last_edge: Tuple[int, int] = self.boundary_edges[0]
 
         while around_nodes[0] != around_nodes[-1]:
-            edges = boundary_node2edge[around_nodes[-1]].copy()
+            edges: List[Tuple[int, int]] = boundary_node2edge[around_nodes[-1]].copy()
             edges.remove(last_edge)
-            nodes = list(edges[0])
-            nodes.remove(around_nodes[-1])
-            around_nodes.append(nodes[0])
+            new_nodes: List[int] = list(edges[0])
+            new_nodes.remove(around_nodes[-1])
+            around_nodes.append(new_nodes[0])
             last_edge = edges[0]
             if len(around_nodes) >= self.verts.shape[0]:
                 logger.error(
@@ -533,36 +722,49 @@ class Mesh:
                     "UV boundary traversal exceeded mesh size — boundary may be broken"
                 )
 
-        lengths = np.cumsum(
+        lengths: NDArray[Any] = np.cumsum(
             np.linalg.norm(
-                self.verts[around_nodes[:-1]] - self.verts[around_nodes[1:]], axis=1
+                self.verts[around_nodes[:-1]] - self.verts[around_nodes[1:]],
+                axis=1,
             )
         )
-        total_length = lengths[-1]
-        bc_u = np.sin(2 * np.pi * lengths / total_length)
-        bc_v = np.cos(2 * np.pi * lengths / total_length)
+        total_length: float = float(lengths[-1])
+        bc_u: NDArray[Any] = np.sin(2 * np.pi * lengths / total_length)
+        bc_v: NDArray[Any] = np.cos(2 * np.pi * lengths / total_length)
 
         return around_nodes, bc_u, bc_v
 
-    def compute_triareas(self):
-        self.triareas = []
+    def compute_triareas(self) -> None:
+        """
+        Compute the area of each triangle (J/2) and store as a NumPy array.
+        """
+        triareas_list: List[float] = []
         for e in range(self.connectivity.shape[0]):
-            B, J = self.Bmatrix(e)
-            self.triareas.append(J / 2)
-        self.triareas = np.array(self.triareas)
+            _, J = self.Bmatrix(e)
+            triareas_list.append(J / 2.0)
 
-    def tri2node_interpolation(self, cell_field):
+        triareas_arr: NDArray[Any] = np.array(triareas_list, dtype=float)
+        self.triareas = triareas_arr
+
+    def tri2node_interpolation(self, cell_field: NDArray[Any]) -> List[float]:
+        """
+        Interpolate triangle‐based field to nodes using area‐weighted averaging.
+        """
         if self.triareas is None:
             self.compute_triareas()
-        node_field = []
+        assert self.triareas is not None
+
+        node_field: List[float] = []
         for i in range(self.verts.shape[0]):
-            tris = self.node_to_tri[i]
-            areas = self.triareas[tris]
-            fields = cell_field[tris]
-            nodal_val = np.sum(areas * fields) / np.sum(areas)
+            tris: List[int] = self.node_to_tri[i]
+            areas: NDArray[Any] = self.triareas[tris]
+            fields: NDArray[Any] = cell_field[tris]
+            nodal_val: float = float(np.sum(areas * fields) / np.sum(areas))
             node_field.append(nodal_val)
+
         return node_field
 
+    # TODO Is this deprecated?
     # def compute_uvscaling_nodes(self):
     #     uvmesh =
     #     if self.uvscaling is None:
