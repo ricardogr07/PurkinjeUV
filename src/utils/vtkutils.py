@@ -1,3 +1,4 @@
+from typing import Any
 import vtk
 import numpy as np
 from vtkmodules.numpy_interface import dataset_adapter as dsa
@@ -5,7 +6,11 @@ from vtkmodules.util.numpy_support import numpy_to_vtkIdTypeArray, numpy_to_vtk
 from .igb_reader import IGBReader
 
 
-def vtk_unstructuredgrid_from_list(xyz, cells, vtk_type):
+def vtk_unstructuredgrid_from_list(
+    xyz: np.ndarray[Any, Any],
+    cells: np.ndarray[Any, Any],
+    vtk_type: int,
+) -> vtk.vtkUnstructuredGrid:
     "Creates VTK ugrid from list of points and edges"
 
     # points directly from array
@@ -28,7 +33,13 @@ def vtk_unstructuredgrid_from_list(xyz, cells, vtk_type):
     return grid
 
 
-def vtkIGBReader(fname, name="cell", cell_centered=True, scale=1.0, origin=0.0):
+def vtkIGBReader(
+    fname: str,
+    name: str = "cell",
+    cell_centered: bool = True,
+    scale: float = 1.0,
+    origin: float = 0.0,
+) -> vtk.vtkImageData:
     "Convert to VTK image"
 
     # first we check the header
@@ -78,7 +89,10 @@ def vtkIGBReader(fname, name="cell", cell_centered=True, scale=1.0, origin=0.0):
     return vtk_img
 
 
-def vtk_extract_boundary_surfaces(vtk_cell, triangulate=False):
+def vtk_extract_boundary_surfaces(
+    vtk_cell: vtk.vtkDataSet,
+    triangulate: bool = False,
+) -> vtk.vtkPolyData:
     "Extract left/right endocardium from the cell file"
 
     # use Extent and not Dimensions because data are cell-centered
