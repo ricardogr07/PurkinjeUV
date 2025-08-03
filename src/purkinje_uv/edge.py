@@ -1,6 +1,6 @@
 import numpy as np
 from numpy.typing import NDArray
-from typing import Any, Optional
+from typing import Any, Optional, Sequence
 
 
 class Edge:
@@ -24,7 +24,7 @@ class Edge:
         self,
         n1: int,
         n2: int,
-        nodes: NDArray[Any],
+        nodes: Sequence[NDArray[Any]],
         parent: Optional[int],
         branch: Optional[int],
     ) -> None:
