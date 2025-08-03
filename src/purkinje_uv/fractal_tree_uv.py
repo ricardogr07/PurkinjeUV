@@ -1,6 +1,7 @@
 import logging
 from collections import defaultdict
-from typing import Any, Tuple, List
+from typing import Any, Tuple, List, Dict, DefaultDict, Optional, Sequence
+from numpy.typing import NDArray
 
 import meshio
 import numpy as np
@@ -9,6 +10,7 @@ import vtk
 
 from .edge import Edge
 from .mesh import Mesh
+from .fractal_tree_parameters import Parameters
 
 logger = logging.getLogger(__name__)
 
@@ -46,11 +48,22 @@ class FractalTree:
     save(filename: str) -> None
     """
 
-    def __init__(self, params: Any) -> None:
+    mesh: Mesh
+    mesh_uv: Mesh
+    loc: vtk.vtkCellLocator
+    scaling_nodes: NDArray[Any]
+    params: Parameters
+    uv_nodes: NDArray[Any]
+    edges: List[Edge]
+    end_nodes: List[int]
+    connectivity: List[List[int]]
+    nodes_xyz: List[NDArray[Any]]
+
+    def __init__(self, params: Parameters) -> None:
         """
         Initializes the fractal tree UV mapping object.
         Args:
-            params (Any): An object containing parameters for mesh file path and other settings.
+            params (Parameters): An object containing parameters for mesh file path and other settings.
         Attributes:
             m (Mesh): The original mesh loaded from the file specified in params.
             mesh_uv (Mesh): A mesh object with UV coordinates extended to 3D.
@@ -61,98 +74,144 @@ class FractalTree:
         Raises:
             Any exceptions raised by Mesh, pv.read, or VTK methods will propagate.
         """
-        self.mesh = Mesh(params.meshfile)
+
+        if not isinstance(params, Parameters):
+            raise TypeError(
+                "The parameters must be an instance of the Parameters class"
+            )
+        if not getattr(params, "meshfile", None):
+            raise ValueError("Parameter 'meshfile' must be provided")
+        logger.info("Initializing FractalTree with parameters: %r", params)
+        self.params = params
+
+        # Load mesh
+        meshfile = params.meshfile
+        assert meshfile is not None, "Parameter 'meshfile' must be provided"
+        self.mesh: Mesh = Mesh(meshfile)
+
+        # Compute UV scaling
         logger.info("Computing UV map")
         self.mesh.compute_uvscaling()
 
-        self.mesh_uv = Mesh(
-            verts=np.concatenate(
-                (self.mesh.uv, np.zeros((self.mesh.uv.shape[0], 1))), axis=1
-            ),
+        # Embed UV into 3D
+        if self.mesh.uv is None:
+            raise RuntimeError("UV map missing after compute_uvscaling")
+        uv_2d: NDArray[Any] = self.mesh.uv
+        uv_3d: NDArray[Any] = np.concatenate(
+            (uv_2d, np.zeros((uv_2d.shape[0], 1), dtype=float)), axis=1
+        )
+        self.mesh_uv: Mesh = Mesh(
+            verts=uv_3d,
             connectivity=self.mesh.connectivity,
         )
-        mpv = pv.read(params.meshfile)
+        logger.info("UV‐embedded mesh created: %d verts", self.mesh_uv.verts.shape[0])
+
+        # Build VTK locator
+        mpv: Any = pv.read(meshfile)
         mpv.points = self.mesh_uv.verts
         self.loc = vtk.vtkCellLocator()
         self.loc.SetDataSet(mpv)
         self.loc.BuildLocator()
-        self.scaling_nodes = np.array(
-            self.mesh_uv.tri2node_interpolation(self.mesh.uvscaling)
-        )
-        self.params = params
 
-    def _interpolate(self, vectors: np.ndarray, r: float, t: float) -> np.ndarray:
+        # Compute scaling nodes
+        if self.mesh.uvscaling is None:
+            raise RuntimeError("UV scaling missing")
+        scaling_list: List[float] = self.mesh_uv.tri2node_interpolation(
+            self.mesh.uvscaling
+        )
+        self.scaling_nodes: NDArray[Any] = np.array(scaling_list, dtype=float)
+
+    def _interpolate(
+        self,
+        vectors: Sequence[NDArray[Any]],
+        r: float,
+        t: float,
+    ) -> NDArray[Any]:
         """
         Interpolates between three vectors using barycentric coordinates.
 
         Args:
-            vectors (list or array-like): A sequence of three vectors to interpolate between.
-            r (float): The barycentric coordinate corresponding to the second vector.
-            t (float): The barycentric coordinate corresponding to the third vector.
+            vectors: Sequence of three NumPy arrays (vectors) to blend.
+            r: Weight for the second vector.
+            t: Weight for the third vector.
 
         Returns:
-            The interpolated vector as a linear combination of the input vectors.
-
-        Note:
-            The first vector's weight is computed as (1 - r - t).
+            A NumPy array representing t*vectors[2] + r*vectors[1] + (1−r−t)*vectors[0].
         """
-        return t * vectors[2] + r * vectors[1] + (1 - r - t) * vectors[0]
+        result: NDArray[Any] = (
+            t * vectors[2] + r * vectors[1] + (1 - r - t) * vectors[0]
+        )
+        return result
 
     def _eval_field(
-        self, point: np.ndarray, field: np.ndarray, mesh: Mesh
-    ) -> Tuple[Any, Any, int]:
+        self,
+        point: NDArray[Any],
+        field: NDArray[Any],
+        mesh: Mesh,
+    ) -> Tuple[NDArray[Any], NDArray[Any], int]:
         """
-        Evaluates the field at a given point by projecting the point onto the mesh and interpolating the field value.
+        Evaluates a scalar or vector field at `point` by projecting onto `mesh`
+        and interpolating using barycentric coordinates.
 
         Args:
-            point (np.ndarray): The coordinates of the point where the field is to be evaluated.
-            field (np.ndarray): The field values defined on the mesh nodes.
-            mesh (Mesh): The mesh object containing connectivity and projection methods.
+            point: (n,)-shaped array of coordinates to evaluate.
+            field: (n_nodes, ...)-shaped array of field values at mesh nodes.
+            mesh: Mesh object supporting `project_new_point` and `.connectivity`.
 
         Returns:
-            Tuple[Any, Any, int]: A tuple containing:
-                - The interpolated field value at the projected point.
-                - The projected point coordinates.
-                - The index of the triangle in the mesh where the point was projected.
+            interpolated: Field value at the projected point.
+            ppoint: Coordinates of the projected point.
+            tri: Index of the triangle containing the projection.
         """
         ppoint, tri, r, t = mesh.project_new_point(point, 5)
-        return self._interpolate(field[mesh.connectivity[tri]], r, t), ppoint, tri
+        interpolated: NDArray[Any] = self._interpolate(
+            field[mesh.connectivity[tri]], r, t
+        )
+        return interpolated, ppoint, tri
 
-    def _point_in_mesh(self, point: np.ndarray, mesh: Mesh) -> bool:
+    def _point_in_mesh(self, point: NDArray[Any], mesh: Mesh) -> bool:
         """
         Determines whether a given point is inside the specified mesh.
 
         Args:
-            point (np.ndarray): The 2D coordinates of the point to check.
-            mesh (Mesh): The mesh object to test against.
+            point: 2D coordinates of the point to check.
+            mesh: Mesh object to test against.
 
         Returns:
-            bool: True if the point is inside the mesh, False otherwise.
+            True if the point is inside the mesh, False otherwise.
         """
-        point = np.append(point, np.zeros(1))
-        _, tri, _, _ = mesh.project_new_point(point, 5)
+        point_3d: NDArray[Any] = np.append(point, np.zeros(1, dtype=float))
+        _, tri, _, _ = mesh.project_new_point(point_3d, 5)
         return tri >= 0
 
-    def _point_in_mesh_vtk(self, point: np.ndarray, loc: vtk.vtkCellLocator) -> bool:
+    def _point_in_mesh_vtk(
+        self,
+        point: NDArray[Any],
+        loc: vtk.vtkCellLocator,
+    ) -> bool:
         """
         Determines whether a given point is inside a mesh using VTK's cell locator.
 
         Args:
-            point (np.ndarray): The 3D coordinates of the point to check.
-            loc (vtk.vtkCellLocator): The VTK cell locator associated with the mesh.
+            point: 2D or 3D coordinates of the point to check.
+            loc: The VTK cell locator associated with the mesh.
 
         Returns:
-            bool: True if the point is inside the mesh (within a tolerance), False otherwise.
+            True if the point is inside the mesh (within a tolerance), False otherwise.
         """
-        point = np.append(point, np.zeros(1))
+        # Ensure the point is 3D: if 2D, append zero z-coordinate
+        point_3d: NDArray[Any] = np.append(point, np.zeros(1, dtype=float))
+
         cellId = vtk.reference(0)
         subId = vtk.reference(0)
         d = vtk.reference(0.0)
-        ppoint = np.zeros(3)
-        loc.FindClosestPoint(point, ppoint, cellId, subId, d)
-        return d.get() < 1e-9
+        ppoint: NDArray[Any] = np.zeros(3, dtype=float)
 
-    def _scaling(self, x: np.ndarray) -> tuple[float, int]:
+        loc.FindClosestPoint(point_3d, ppoint, cellId, subId, d)
+        inside: bool = bool(d.get() < 1e-9)
+        return inside
+
+    def _scaling(self, x: NDArray[Any]) -> Tuple[float, int]:
         """
         Calculates the scaling factor and triangle index for a given point.
         Appends a zero to the input array `x`, finds the closest point on the mesh using VTK,
@@ -164,38 +223,51 @@ class FractalTree:
         Returns:
             tuple[float, int]: A tuple containing the square root of the scaling factor and the triangle index.
         """
-        x = np.append(x, np.zeros(1))
+        x3d: NDArray[Any] = np.append(x, np.zeros(1, dtype=float))
         cellId = vtk.reference(0)
         subId = vtk.reference(0)
         d = vtk.reference(0.0)
-        ppoint = np.zeros(3)
-        self.loc.FindClosestPoint(x, ppoint, cellId, subId, d)
+        ppoint: NDArray[Any] = np.zeros(3, dtype=float)
+
+        # Ensure UV scaling was computed so indexing is safe
+        assert self.mesh.uvscaling is not None, "UV scaling must be initialized"
+        # Single declaration of tri avoids multiple redeclarations
+        tri: int
+
+        self.loc.FindClosestPoint(x3d, ppoint, cellId, subId, d)
         if d.get() > 1e-3:
             tri = -1
         else:
             tri = cellId.get()
 
-        return np.sqrt(self.mesh.uvscaling[tri]), tri
+        scaling_value: float = float(np.sqrt(self.mesh.uvscaling[tri]))
+        return scaling_value, tri
 
-    def _add_node(self, nodes: List[np.ndarray], new_node: np.ndarray) -> int:
+    def _add_node(
+        self,
+        nodes: List[NDArray[Any]],
+        new_node: NDArray[Any],
+    ) -> int:
         """
         Adds a new node to the nodes list and returns its index.
+
         Args:
-            nodes (List[np.ndarray]): List of existing nodes.
-            new_node (np.ndarray): The new node to add.
+            nodes: List of existing node coordinates (NumPy arrays).
+            new_node: A NumPy array for the new node coordinates.
+
         Returns:
-            int: The index of the newly added node.
+            The index of the newly added node.
         """
         nodes.append(new_node)
         return len(nodes) - 1
 
     def _compute_new_direction(
         self,
-        dir: np.ndarray,
-        rotation: np.ndarray,
-        grad_dist: np.ndarray = None,
+        dir: NDArray[Any],
+        rotation: NDArray[Any],
+        grad_dist: Optional[NDArray[Any]] = None,
         w: float = 0.0,
-    ) -> np.ndarray:
+    ) -> NDArray[Any]:
         """
         Computes a new direction vector by applying a rotation and optionally adding a weighted gradient.
         Args:
@@ -206,12 +278,17 @@ class FractalTree:
         Returns:
             np.ndarray: The normalized new direction vector.
         """
-        new_dir = np.matmul(rotation, dir)
+        result: NDArray[Any] = np.matmul(rotation, dir)
         if grad_dist is not None and w != 0.0:
-            new_dir = new_dir + w * grad_dist
-        return new_dir / np.linalg.norm(new_dir)
+            result = result + w * grad_dist
+        normed: NDArray[Any] = result / np.linalg.norm(result)
+        return normed
 
-    def _can_grow_to(self, new_node: np.ndarray, loc: vtk.vtkCellLocator) -> bool:
+    def _can_grow_to(
+        self,
+        new_node: NDArray[Any],
+        loc: vtk.vtkCellLocator,
+    ) -> bool:
         """
         Checks if a new node can be grown to (i.e., is inside the mesh domain).
         Args:
@@ -224,13 +301,13 @@ class FractalTree:
 
     def _collision_check(
         self,
-        nodes: list[np.ndarray],
-        branches: dict,
-        sister_branches: dict,
+        nodes: Sequence[NDArray[Any]],
+        branches: DefaultDict[int, List[int]],
+        sister_branches: Dict[int, int],
         edge: Edge,
         dx: float,
         s: float,
-    ) -> tuple[bool, np.ndarray]:
+    ) -> Tuple[bool, Optional[NDArray[Any]]]:
         """
         Checks if extending an edge would result in a collision with other nodes, and computes the gradient direction.
 
@@ -247,31 +324,36 @@ class FractalTree:
                 - collision (bool): Whether the new node would collide with existing ones.
                 - grad_dist (np.ndarray): Gradient direction to push away from nearest node (for repulsion).
         """
-        pred_node = nodes[edge.n2]  # predicted new point location
-        all_dist = np.linalg.norm(nodes - pred_node, axis=1)
+        pred_node: NDArray[Any] = nodes[edge.n2]  # predicted new point location
+        # Stack nodes for vectorized distance computation
+        nodes_arr: NDArray[Any] = np.vstack(nodes)
+        all_dist: NDArray[Any] = np.linalg.norm(nodes_arr - pred_node, axis=1)
 
         # Ignore self-branch and sister-branch nodes in collision detection
-        all_dist[branches[edge.branch]] = 1e9
-        if edge.branch in sister_branches:
-            all_dist[branches[sister_branches[edge.branch]]] = 1e9
+        branch_id: Optional[int] = edge.branch
+        if branch_id is not None:
+            all_dist[branches[branch_id]] = 1e9
+            sister: Optional[int] = sister_branches.get(branch_id)
+            if sister is not None:
+                all_dist[branches[sister]] = 1e9
 
-        min_dist = all_dist.min()
-        min_index = all_dist.argmin()
+        min_dist: float = float(all_dist.min())
+        min_index: int = int(all_dist.argmin())
 
         # If too close: mark as collision
         if min_dist < 0.9 * dx * s:
             return True, None
 
         # Compute gradient direction (unit vector)
-        grad_dist = (pred_node - nodes[min_index]) / min_dist
+        grad_dist: NDArray[Any] = (pred_node - nodes_arr[min_index]) / min_dist
         return False, grad_dist
 
     def _grow_initial_branch(
         self,
         edge_queue: List[int],
         edges: List[Edge],
-        nodes: List[np.ndarray],
-        branches: defaultdict,
+        nodes: List[NDArray[Any]],
+        branches: DefaultDict[int, List[int]],
         dx: float,
         init_branch_length: float,
     ) -> int:
@@ -296,26 +378,32 @@ class FractalTree:
         Raises:
             ValueError: If the initial branch goes out of the domain as determined by the `_scaling` method.
         """
-        edge_id = edge_queue.pop(0)
-        edge = edges[edge_id]
+        edge_id: int = edge_queue.pop(0)
+        edge: Edge = edges[edge_id]
         for _ in range(int(init_branch_length / dx)):
             s, tri = self._scaling(nodes[edge.n2])
             if tri < 0:
                 raise ValueError("the initial branch goes out of the domain")
-            new_node = nodes[edge.n2] + edge.dir * dx * s
-            new_node_id = self._add_node(nodes, new_node)
-            branches[edge.branch].append(new_node_id)
+            new_node: NDArray[Any] = nodes[edge.n2] + edge.dir * dx * s
+            new_node_id: int = self._add_node(nodes, new_node)
+
+            # Retrieve and assert a concrete branch_id before use
+            branch_id = edge.branch
+            assert branch_id is not None, "Edge.branch must be set"
+
+            branches[branch_id].append(new_node_id)
             edge_queue.append(len(edges))
-            edges.append(Edge(edge.n2, new_node_id, nodes, edge_id, edge.branch))
+            # Create new Edge with concrete int branch_id
+            edges.append(Edge(edge.n2, new_node_id, nodes, edge_id, branch_id))
         return edge_id
 
     def _grow_fascicles(
         self,
         branching_edge_id: int,
-        edges: list,
-        nodes: list,
-        branches: dict,
-        edge_queue: list,
+        edges: List[Edge],
+        nodes: List[NDArray[Any]],
+        branches: DefaultDict[int, List[int]],
+        edge_queue: List[int],
         branch_id: int,
         dx: float,
     ) -> None:
@@ -345,53 +433,66 @@ class FractalTree:
         for fascicle_length, fascicles_angle in zip(
             self.params.fascicles_length, self.params.fascicles_angles
         ):
-            Rotation = np.array(
+            # Build 2D rotation matrix for this fascicle
+            Rotation: NDArray[Any] = np.array(
                 [
                     [np.cos(fascicles_angle), -np.sin(fascicles_angle)],
                     [np.sin(fascicles_angle), np.cos(fascicles_angle)],
-                ]
+                ],
+                dtype=float,
             )
-            edge = edges[branching_edge_id]
-            new_dir = self._compute_new_direction(edge.dir, Rotation)
+            edge: Edge = edges[branching_edge_id]
+            new_dir: NDArray[Any] = self._compute_new_direction(edge.dir, Rotation)
+            s: float
+            tri: int
             s, tri = self._scaling(nodes[edge.n2])
             if tri < 0:
-                raise ValueError("the fascicle goes out of the domain")
-            new_node = nodes[edge.n2] + new_dir * dx * s
-            new_node_id = self._add_node(nodes, new_node)
+                raise ValueError("The fascicle goes out of the domain.")
+            new_node: NDArray[Any] = nodes[edge.n2] + new_dir * dx * s
+            new_node_id: int = self._add_node(nodes, new_node)
             branch_id += 1
             branches[branch_id].append(new_node_id)
             edge_queue.append(len(edges))
             edges.append(
                 Edge(edge.n2, new_node_id, nodes, branching_edge_id, edge.branch)
             )
-            # Grow the fascicle
+
+            # Grow the fascicle along its length
             for _ in range(int(fascicle_length / dx)):
-                edge_id = edge_queue.pop(0)
+                edge_id: int = edge_queue.pop(0)
                 edge = edges[edge_id]
-                new_dir = self._compute_new_direction(edge.dir, np.eye(2))
+
+                # For inner segments, no additional rotation
+                inner_rotation: NDArray[Any] = np.eye(2, dtype=float)
+                new_dir = self._compute_new_direction(edge.dir, inner_rotation)
                 s, tri = self._scaling(nodes[edge.n2])
                 if tri < 0:
-                    raise ValueError("the fascicle goes out of the domain")
+                    raise ValueError("The fascicle goes out of the domain.")
                 new_node = nodes[edge.n2] + new_dir * dx * s
                 new_node_id = self._add_node(nodes, new_node)
-                branches[edge.branch].append(new_node_id)
+
+                # Ensure branch is not None before using it as a dict key
+                branch_inner = edge.branch
+                assert branch_inner is not None, "Edge.branch must be set"
+                branches[branch_inner].append(new_node_id)
                 edge_queue.append(len(edges))
-                edges.append(Edge(edge.n2, new_node_id, nodes, edge_id, edge.branch))
+
+                edges.append(Edge(edge.n2, new_node_id, nodes, edge_id, branch_inner))
 
     def _grow_generations(
         self,
-        edges: list,
-        nodes: list,
-        branches: dict,
-        edge_queue: list,
+        edges: List[Edge],
+        nodes: List[NDArray[Any]],
+        branches: DefaultDict[int, List[int]],
+        edge_queue: List[int],
         branch_id: int,
         dx: float,
         branch_length: float,
         w: float,
-        Rplus: np.ndarray,
-        Rminus: np.ndarray,
-        end_nodes: list,
-        sister_branches: dict,
+        Rplus: NDArray[Any],
+        Rminus: NDArray[Any],
+        end_nodes: List[int],
+        sister_branches: Dict[int, int],
     ) -> None:
         """
         Simulates the iterative growth of a fractal tree structure over multiple generations.
@@ -422,19 +523,21 @@ class FractalTree:
         """
         for gen in range(self.params.N_it):
             logger.info(f"Generation {gen}")
-            branching_queue = []
+            branching_queue: List[int] = []
             # Branching step
             while edge_queue:
-                edge_id = edge_queue.pop(0)
-                edge = edges[edge_id]
-                for R in [Rplus, Rminus]:
-                    new_dir = self._compute_new_direction(edge.dir, R)
+                edge_id: int = edge_queue.pop(0)
+                edge: Edge = edges[edge_id]
+                for R in (Rplus, Rminus):
+                    new_dir: NDArray[Any] = self._compute_new_direction(edge.dir, R)
+                    s: float
+                    tri: int
                     s, tri = self._scaling(nodes[edge.n2])
-                    new_node = nodes[edge.n2] + new_dir * dx * s
+                    new_node: NDArray[Any] = nodes[edge.n2] + new_dir * dx * s
                     if not self._can_grow_to(new_node, self.loc):
                         end_nodes.append(edge.n2)
                         continue
-                    new_node_id = self._add_node(nodes, new_node)
+                    new_node_id: int = self._add_node(nodes, new_node)
                     branching_queue.append(len(edges))
                     branch_id += 1
                     branches[branch_id].append(new_node_id)
@@ -442,12 +545,12 @@ class FractalTree:
                 sister_branches[branch_id - 1] = branch_id
                 sister_branches[branch_id] = branch_id - 1
 
-            edge_queue = branching_queue
+            # Prepare for the growing step
+            edge_queue[:] = branching_queue
 
             # Growing step
             for _ in range(int(branch_length / dx)):
-                growing_queue = []
-                new_nodes = []
+                growing_queue: List[int] = []
                 while edge_queue:
                     edge_id = edge_queue.pop(0)
                     edge = edges[edge_id]
@@ -459,64 +562,88 @@ class FractalTree:
                         end_nodes.append(edge.n2)
                         continue
                     new_dir = self._compute_new_direction(
-                        edge.dir, np.eye(2), grad_dist, w
+                        edge.dir, np.eye(2, dtype=float), grad_dist, w
                     )
                     new_node = nodes[edge.n2] + new_dir * dx * s
                     if not self._can_grow_to(new_node, self.loc):
                         end_nodes.append(edge.n2)
                         continue
                     new_node_id = self._add_node(nodes, new_node)
-                    new_nodes.append(new_node)
                     growing_queue.append(len(edges))
-                    branches[edge.branch].append(new_node_id)
+
+                    # Ensure branch is not None before indexing
+                    branch_inner = edge.branch
+                    assert branch_inner is not None, "Edge.branch must be set"
+                    branches[branch_inner].append(new_node_id)
+
+                    # Create new Edge with concrete branch_inner
                     edges.append(
-                        Edge(edge.n2, new_node_id, nodes, edge_id, edge.branch)
+                        Edge(edge.n2, new_node_id, nodes, edge_id, branch_inner)
                     )
-                edge_queue = growing_queue
 
-    def grow_tree(self):
+                edge_queue[:] = growing_queue
+
+    def grow_tree(self) -> None:
+        """
+        Generates the full fractal tree by:
+          1. Initializing queues, nodes, edges, and branches.
+          2. Growing the initial main branch.
+          3. Adding fascicles.
+          4. Iterating through generations of branching and growth.
+          5. Recording terminal (end) nodes and building final connectivity.
+          6. Mapping UV‐space nodes back to 3D coordinates.
+        """
         # Initialization
-        branches = defaultdict(list)
-        branch_id = 0
-        end_nodes = []
-        sister_branches = {}
-        dx = self.params.l_segment
+        branches: DefaultDict[int, List[int]] = defaultdict(list)
+        branch_id: int = 0
+        end_nodes: List[int] = []
+        sister_branches: Dict[int, int] = {}
+        dx: float = self.params.l_segment
 
-        # Initial nodes and direction
-        init_node = self.mesh_uv.verts[self.params.init_node_id][:2]
-        second_node = self.mesh_uv.verts[self.params.second_node_id][:2]
+        # Initial nodes & direction
+        init_node: NDArray[Any] = self.mesh_uv.verts[self.params.init_node_id][:2]
+        second_node: NDArray[Any] = self.mesh_uv.verts[self.params.second_node_id][:2]
+        s: float
+        tri: int
         s, tri = self._scaling(init_node)
         if tri < 0:
             raise ValueError("The initial node is outside the domain")
-        init_dir = second_node - init_node
-        init_dir /= np.linalg.norm(init_dir)
-        nodes = [init_node, init_node + dx * init_dir * s]
-        edges = [Edge(0, 1, nodes, None, branch_id)]
-        edge_queue = [0]
+        init_dir: NDArray[Any] = second_node - init_node
+        init_dir = init_dir / np.linalg.norm(init_dir)
+
+        nodes: List[NDArray[Any]] = [
+            init_node,
+            init_node + dx * init_dir * s,
+        ]
+        edges: List[Edge] = [Edge(0, 1, nodes, None, branch_id)]
+        edge_queue: List[int] = [0]
         branches[branch_id].append(0)
 
-        branch_length = self.params.length
-        init_branch_length = self.params.init_length
-        theta = self.params.branch_angle
-        w = self.params.w
+        branch_length: float = self.params.length
+        init_branch_length: float = self.params.init_length
+        theta: float = self.params.branch_angle
+        w: float = self.params.w
 
-        Rplus = np.array(
-            [[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]]
+        Rplus: NDArray[Any] = np.array(
+            [[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]],
+            dtype=float,
         )
-        Rminus = np.array(
-            [[np.cos(-theta), -np.sin(-theta)], [np.sin(-theta), np.cos(-theta)]]
+        Rminus: NDArray[Any] = np.array(
+            [[np.cos(-theta), -np.sin(-theta)], [np.sin(-theta), np.cos(-theta)]],
+            dtype=float,
         )
 
-        # Grow initial branch
+        # Grow the main branch
         branching_edge_id = self._grow_initial_branch(
             edge_queue, edges, nodes, branches, dx, init_branch_length
         )
 
-        # Grow fascicles from the initial branch
+        # Add fascicles
         self._grow_fascicles(
             branching_edge_id, edges, nodes, branches, edge_queue, branch_id, dx
         )
 
+        # Iterate generations
         self._grow_generations(
             edges,
             nodes,
@@ -532,19 +659,19 @@ class FractalTree:
             sister_branches,
         )
 
-        # Finalize end nodes and connectivity
-        end_nodes += [edges[edge].n2 for edge in edge_queue]
-        self.uv_nodes = np.array(nodes)
-        self.edges = edges
-        self.end_nodes = end_nodes
-        self.connectivity = [[edge.n1, edge.n2] for edge in edges]
+        # Finalize end nodes & connectivity
+        end_nodes.extend([edges[e].n2 for e in edge_queue])
+        self.uv_nodes: NDArray[Any] = np.array(nodes, dtype=float)
+        self.edges: List[Edge] = edges
+        self.end_nodes: List[int] = end_nodes
+        self.connectivity: List[List[int]] = [[ed.n1, ed.n2] for ed in edges]
 
-        # Map UV nodes to XYZ space
-        self.nodes_xyz = []
+        # Map UV nodes back to 3D coordinates
+        self.nodes_xyz: List[NDArray[Any]] = []
         for node in nodes:
-            n = np.append(node, np.zeros(1))
-            f, _, tri = self._eval_field(n, self.mesh.verts, self.mesh_uv)
-            self.nodes_xyz.append(f)
+            node_3d: NDArray[Any] = np.append(node, np.zeros(1, dtype=float))
+            val, _, _ = self._eval_field(node_3d, self.mesh.verts, self.mesh_uv)
+            self.nodes_xyz.append(val)
 
     def save(self, filename: str) -> None:
         """
@@ -556,10 +683,16 @@ class FractalTree:
             The path to the file where the mesh will be saved.
         """
         try:
-            line = meshio.Mesh(
-                np.array(self.nodes_xyz), [("line", np.array(self.connectivity))]
-            )
-            line.write(filename)
-            logger.info(f"Fractal tree mesh saved to {filename}")
+            # Convert stored node coordinates and edge connectivity to typed arrays
+            line_nodes: NDArray[Any] = np.array(self.nodes_xyz, dtype=float)
+            connectivity_arr: NDArray[Any] = np.array(self.connectivity, dtype=int)
+
+            # Prepare meshio cells list: one cell block of type 'line'
+            cells: List[Tuple[str, NDArray[Any]]] = [("line", connectivity_arr)]
+
+            # Create and write the mesh
+            mesh_out = meshio.Mesh(points=line_nodes, cells=cells)
+            mesh_out.write(filename)
+            logger.info("Fractal tree mesh successfully saved to %s", filename)
         except Exception as e:
-            logger.error(f"Failed to save fractal tree mesh to {filename}: {e}")
+            logger.error("Failed to save fractal tree mesh to %s: %s", filename, e)

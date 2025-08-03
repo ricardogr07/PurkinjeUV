@@ -2,6 +2,8 @@ import numpy as np
 from collections import Counter
 from itertools import chain
 import logging
+from typing import Any, Sequence, Optional, Dict, List
+from numpy.typing import NDArray
 
 import meshio
 from fimpy import create_fim_solver
@@ -16,10 +18,15 @@ logger = logging.getLogger(__name__)
 class PurkinjeTree:
     "Class for eikonal solver on Purkinje tree"
 
-    def __init__(self, nodes, connectivity, end_nodes):
+    def __init__(
+        self,
+        nodes: Sequence[NDArray[Any]],
+        connectivity: Sequence[Sequence[int]],
+        end_nodes: Sequence[int],
+    ) -> None:
         "Init from FractalTree generator"
 
-        self.connectivity = connectivity
+        self.connectivity = np.array(connectivity, dtype=int)
         self.xyz = np.array(nodes)
 
         # We keep the tree in VTK for data transfer
@@ -41,11 +48,26 @@ class PurkinjeTree:
         self.cv = 2.5  # [m/s]
 
         logger.info(
-            f"PurkinjeTree initialized with {self.xyz.shape[0]} nodes and {self.connectivity.shape[0]} edges"
+            f"PurkinjeTree initialized with {self.xyz.shape[0]} nodes"
+            f" and {self.connectivity.shape[0]} edges"
         )
 
-    def activate_fim(self, x0, x0_vals, return_only_pmj=True):
-        "Activate tree with fim-python"
+    def activate_fim(
+        self,
+        x0: NDArray[Any],
+        x0_vals: NDArray[Any],
+        return_only_pmj: bool = True,
+    ) -> NDArray[Any]:
+        '''Activate tree with FIM solver.
+
+        Args:
+            x0: Starting node indices (array of ints).
+            x0_vals: Values at starting nodes (array of floats).
+            return_only_pmj: If True, return activation only at PMJ nodes.
+
+        Returns:
+            Numpy array of activation values.
+        '''
 
         logger.info("Activating Purkinje tree with FIM solver")
 
@@ -56,7 +78,7 @@ class PurkinjeTree:
         D = self.cv * np.eye(xyz.shape[1])[np.newaxis] * ve[..., np.newaxis, np.newaxis]
 
         fim = create_fim_solver(xyz, elm, D, device="cpu")
-        act = fim.comp_fim(x0, x0_vals)
+        act: NDArray[Any] = fim.comp_fim(x0, x0_vals)
 
         # update activation in VTK
         da = dsa.WrapDataObject(self.vtk_tree)
@@ -67,9 +89,12 @@ class PurkinjeTree:
         else:
             return act
 
-    def save(self, fname):
-        "Save to VTK"
+    def save(self, fname: str) -> None:
+        """Save tree to VTK file.
 
+        Args:
+            fname: Output VTK file path.
+        """
         logger.info(f"Saving PurkinjeTree to VTK at {fname}")
 
         writer = vtk.vtkXMLUnstructuredGridWriter()
@@ -77,7 +102,7 @@ class PurkinjeTree:
         writer.SetInputData(self.vtk_tree)
         writer.Update()
 
-    def save_pmjs(self, fname):
+    def save_pmjs(self, fname: str) -> None:
         "Save the junctions as VTP"
 
         logger.info(f"Saving PMJs to VTP at {fname}")
@@ -94,14 +119,19 @@ class PurkinjeTree:
 
         mesh.write(fname)
 
-    def get_pmjs_activation(self):
+    def get_pmjs_activation(self) -> NDArray[Any]:
         "Return the current activation values at PMJs"
 
         da = dsa.WrapDataObject(self.vtk_tree)
-        act = da.PointData["activation"]
+        act: NDArray[Any] = da.PointData["activation"]
         return act[self.pmj]
 
-    def save_meshio(self, fname, point_data=None, cell_data=None):
+    def save_meshio(
+        self,
+        fname: str,
+        point_data: Optional[Dict[str, Any]] = None,
+        cell_data: Optional[Dict[str, Any]] = None,
+    ) -> None:
         "Save with meshio"
 
         logger.info(f"Saving PurkinjeTree to meshio format at {fname}")
@@ -114,56 +144,37 @@ class PurkinjeTree:
 
         mesh.write(fname)
 
-    def extract_edges(self):
-        "List of edges from branches"
+    def extract_edges(self) -> NDArray[Any]:
+        """Return the list of edges from the original connectivity array."""
+        return self.connectivity
 
-        # edges in each branch
-        bedges = chain.from_iterable(
-            zip(b.nodes[0:-1], b.nodes[1:])
-            for b in self.branches.values()
-            if len(b.nodes) > 1
-        )
-        # collect all edges
-        edges = np.array(list(bedges))
+    def extract_pmj_counter(self) -> List[int]:
+        """Compute leaf-node IDs (degree == 1) entirely in Python."""
 
-        return edges
+        # Flatten our connectivity array into individual node IDs
+        flattened = chain.from_iterable(self.connectivity.tolist())
+        counts = Counter(flattened)
 
-    def extract_pmj_counter(self):
-        "Pure Python version"
+        # Leaf nodes appear exactly once in the edge list
+        return [node for node, deg in counts.items() if deg == 1]
 
-        t = chain.from_iterable(
-            (b.nodes[0], b.nodes[-1])
-            for b in self.branches.values()
-            if len(b.nodes) > 1
-        )
-        c = Counter(t)
-        enodes = [k for k, v in c.items() if v == 1 and v != self.branches[0].nodes[0]]
+    def extract_pmj_np_bincount(self) -> NDArray[Any]:
+        """Compute leaf-node IDs (degree == 1) using numpy bin-count."""
 
-        return enodes
+        # Flatten the connectivity array (shape (E,2)) into a 1D sequence of node indices
+        flat = self.connectivity.ravel()
+        counts = np.bincount(flat)
 
-    def extract_pmj_np_bincount(self):
-        "End-nodes of the tree or junctions"
+        # Nodes with count == 1 are leaves
+        return np.where(counts == 1)[0]
 
-        t = chain.from_iterable(
-            (b.nodes[0], b.nodes[-1])
-            for b in self.branches.values()
-            if len(b.nodes) > 1
-        )
-        c = np.bincount(np.fromiter(t, dtype=int))
-        enodes = np.where(c == 1)[0]
-        # we remove the entry point
-        enodes = np.delete(enodes, self.branches[0].nodes[0])
+    def extract_pmj_np_unique(self) -> NDArray[Any]:
+        """Compute leaf-node IDs (degree == 1) using numpy unique."""
 
-        return enodes
+        # Flatten the connectivity array into a 1D sequence of node indices
+        flat = self.connectivity.ravel()
+        nn, cnt = np.unique(flat, return_counts=True)
 
-    def extract_pmj_np_unique(self):
-        t = chain.from_iterable(
-            (b.nodes[0], b.nodes[-1])
-            for b in self.branches.values()
-            if len(b.nodes) > 1
-        )
-        nn, cnt = np.unique(np.fromiter(t, dtype=int), return_counts=True)
-        enodes = nn[cnt == 1]
-        enodes = np.delete(enodes, self.branches[0].nodes[0])
-
-        return enodes
+        # Nodes with exactly one connection are leaves
+        leaves: NDArray[Any] = nn[cnt == 1]
+        return leaves

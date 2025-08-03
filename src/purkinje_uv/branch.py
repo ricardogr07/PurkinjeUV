@@ -1,4 +1,8 @@
 import numpy as np
+from typing import Any, Sequence
+from numpy.typing import NDArray
+from .nodes import Nodes
+from .mesh import Mesh
 
 
 class Branch:
@@ -28,17 +32,17 @@ class Branch:
 
     def __init__(
         self,
-        mesh,
-        init_node,
-        init_dir,
-        init_tri,
-        length,
-        angle,
-        w,
-        nodes,
-        brother_nodes,
-        Nsegments,
-    ):
+        mesh: Mesh,
+        init_node: int,
+        init_dir: NDArray[Any],
+        init_tri: int,
+        length: float,
+        angle: float,
+        w: float,
+        nodes: Nodes,
+        brother_nodes: Sequence[int],
+        Nsegments: int,
+    ) -> None:
         #        self.nnodes=0
         self.child = [0, 0]
         self.dir = np.array([0.0, 0.0, 0.0])
@@ -83,8 +87,11 @@ class Branch:
             # Project the gradient to the surface
             grad = grad - (np.dot(grad, normal)) * normal
             dir = (dir + w * grad) / np.linalg.norm(dir + w * grad)
+
         nodes_id = nodes.add_nodes(self.queue[1:])
-        [self.nodes.append(x) for x in nodes_id]
+        for x in nodes_id:
+            self.nodes.append(x)
+
         if not self.growing:
             nodes.end_nodes.append(self.nodes[-1])
         self.dir = dir
@@ -95,7 +102,12 @@ class Branch:
     #   if shared_node is not -1:
     #      self.nodes.append(shared_node)
 
-    def add_node_to_queue(self, mesh, init_node, dir):
+    def add_node_to_queue(
+        self,
+        mesh: Any,
+        init_node: NDArray[Any],
+        dir: NDArray[Any],
+    ) -> bool:
         """Functions that projects a node in the mesh surface and it to the queue is it lies in the surface.
 
         Args:

@@ -1,4 +1,6 @@
 import numpy as np
+from numpy.typing import NDArray
+from typing import Any, Optional, Sequence
 
 
 class Edge:
@@ -22,13 +24,16 @@ class Edge:
         self,
         n1: int,
         n2: int,
-        nodes: np.ndarray,
-        parent: int | None,
-        branch: int | None,
+        nodes: Sequence[NDArray[Any]],
+        parent: Optional[int],
+        branch: Optional[int],
     ) -> None:
         self.n1 = n1  # ids
         self.n2 = n2  # ids
 
-        self.dir = (nodes[n2] - nodes[n1]) / np.linalg.norm(nodes[n2] - nodes[n1])
+        diff: NDArray[Any] = nodes[n2] - nodes[n1]
+        norm: float = float(np.linalg.norm(diff))
+        self.dir: NDArray[Any] = diff / norm
+
         self.parent = parent
         self.branch = branch

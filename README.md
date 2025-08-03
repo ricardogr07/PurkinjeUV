@@ -1,6 +1,6 @@
 # PurkinjeUV
 
-[![PyPI version](https://badge.fury.io/py/purkinje-uv.svg)](https://badge.fury.io/py/purkinje-uv) [![CI](https://github.com/ricardogr07/PurkinjeUV/actions/workflows/ci.yml/badge.svg)](https://github.com/ricardogr07/PurkinjeUV/actions/workflows/ci.yml) [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![PyPI version](https://badge.fury.io/py/purkinje-uv.svg)](https://badge.fury.io/py/purkinje-uv) [![CI](https://github.com/ricardogr07/purkinje-uv/actions/workflows/ci.yml/badge.svg)](https://github.com/ricardogr07/PurkinjeUV/actions/workflows/ci.yml) [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 PurkinjeUV is a modular Python package for constructing, simulating, and exporting fractal-based Purkinje networks over anatomical or idealized cardiac surface meshes. It offers a flexible architecture for working with geometries via OBJ, VTK, and GMSH, and supports UV mapping, eikonal solvers, and export utilities.
 
@@ -95,7 +95,7 @@ Maintained by Ricardo García Ramírez (July 2025)
   author = {Ricardo García Ramírez},
   title = {PurkinjeUV: Modular Fractal Purkinje Generator on Surface Meshes},
   year = {2025},
-  howpublished = {\url{https://github.com/ricardogr07/PurkinjeUV}}
+  howpublished = {\url{https://github.com/ricardogr07/purkinje-uv}}
 }
 ```
 

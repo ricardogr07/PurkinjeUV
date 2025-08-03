@@ -1,6 +1,6 @@
 # Contributing to PurkinjeUV
 
-Thank you for your interest in contributing to PurkinjeUV!
+Thank you for your interest in contributing to purkinje-uv!
 
 ## Code of Conduct
 
@@ -11,7 +11,7 @@ Please follow the [Contributor Covenant](https://www.contributor-covenant.org/ve
 ### Clone & Environment
 
 ```bash
-git clone https://github.com/ricardogr07/PurkinjeUV.git
+git clone https://github.com/ricardogr07/purkinje-uv.git
 cd PurkinjeUV
 python -m venv .venv
 source .venv/bin/activate

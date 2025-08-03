@@ -1,4 +1,6 @@
 import numpy as np
+from typing import Dict, Any, Tuple, Union
+from numpy.typing import NDArray
 
 
 class IGBReader:
@@ -26,7 +28,7 @@ class IGBReader:
     }
 
     @staticmethod
-    def read_header(filename: str) -> dict:
+    def read_header(filename: str) -> Dict[str, Any]:
         """
         Reads and parses the header of an IGB file.
 
@@ -45,8 +47,11 @@ class IGBReader:
         with open(filename, "rb") as f:
             buf = f.read(1024)
 
+        # Split out the ASCII header block
         lines = buf.decode(errors="ignore").split("\x00", 1)[0].split("\r\n")
         comments = [line.strip()[2:] for line in lines if line.startswith("#")]
+
+        # Collect all non-comment fields, then split on the first ":" in each
         fields = sum(
             (
                 line.split()
@@ -55,12 +60,19 @@ class IGBReader:
             ),
             [],
         )
-        header = dict(part.split(":") for part in fields)
+
+        header: Dict[str, Any] = {}
+        for part in fields:
+            key, val = part.split(":", 1)
+            header[key] = val
         header["comments"] = comments
 
+        # Convert integer fields
         for key in "xyzt":
             if key in header:
                 header[key] = int(header[key])
+
+        # Convert float fields
         for key in ["zero", "facteur"]:
             if key in header:
                 header[key] = float(header[key])
@@ -69,8 +81,10 @@ class IGBReader:
 
     @staticmethod
     def read(
-        filename: str, convert_to_float: bool = False, return_header: bool = False
-    ):
+        filename: str,
+        convert_to_float: bool = False,
+        return_header: bool = False,
+    ) -> Union[NDArray[Any], Tuple[NDArray[Any], Dict[str, Any]]]:
         """
         Reads an IGB file into a NumPy array.
 

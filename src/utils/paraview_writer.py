@@ -1,9 +1,14 @@
 import xml.etree.cElementTree as ET
+from typing import Sequence, Tuple
 
 
 class VTUWriter:
     @staticmethod
-    def write_line_vtu(nodes, elements, filename):
+    def write_line_vtu(
+        nodes: Sequence[Tuple[float, float, float]],
+        elements: Sequence[Tuple[int, int]],
+        filename: str,
+    ) -> None:
         file = ET.Element(
             "VTKFile",
             {"type": "UnstructuredGrid", "version": "0.1", "byte_order": "BigEndian"},
