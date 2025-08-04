@@ -68,6 +68,35 @@ pip install -e ".[docs]"
 sphinx-build -W -b html docs docs/_build/html
 ```
 
+## Docstring Guidelines
+
+We follow the [Google Python Style Guide](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings) for all docstrings—**public** and **internal** alike.
+
+#### Basic template
+
+```python
+def my_function(arg1: int, arg2: str) -> bool:
+    """One-line summary of what the function does.
+
+    More elaborate description, if needed. Describe side effects or behaviors.
+
+    Args:
+        arg1 (int): Description of the first argument.
+        arg2 (str): Description of the second argument.
+
+    Returns:
+        bool: Description of the return value.
+
+    Raises:
+        ValueError: If an invalid value is passed.
+
+    Examples:
+        >>> my_function(1, "hello")
+        True
+    """
+    ...
+
+
 ## Issues & Feature Requests
 
 - Search existing issues

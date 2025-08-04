@@ -1,26 +1,32 @@
+"""Module defining the Parameters class for configuring fractal tree generation.
+
+This module provides the Parameters class, which holds all settings
+for generating a fractal tree structure.
+"""
+
 from typing import List
 
 
 class Parameters:
-    """
-    Class to specify the parameters for generating a fractal tree structure.
+    """Holds settings for generating a fractal tree structure.
 
-        meshfile (str): Path and filename to the mesh OBJ file.
+    Attributes:
+        meshfile (Optional[str]): Path to the mesh OBJ file.
         init_node_id (int): Index of the initial node in the mesh.
-        second_node_id (int): Index of the second node, used to determine the initial direction of the tree.
+        second_node_id (int): Index of the second node, which sets the initial growth direction.
         init_length (float): Length of the first branch.
-        N_it (int): Number of generations (iterations) of branches.
-        length (float): Average length of the branches in the tree.
-        branch_angle (float): Angle (in radians) between the previous branch and the new branch.
-        w (float): Repulsivity parameter controlling branch divergence.
-        l_segment (float): Approximate length of segments composing each branch (interpreted as element length in a finite element mesh).
-        fascicles_angles (list of float): Angles (in radians) for each fascicle branch, relative to the initial branch.
-        fascicles_length (list of float): Lengths for each fascicle branch; must match the size of fascicles_angles.
+        N_it (int): Number of branch generations (iterations).
+        length (float): Mean length of tree branches.
+        branch_angle (float): Angle (in radians) between consecutive branches.
+        w (float): Weight parameter for branch divergence.
+        l_segment (float): Approximate length of each branch segment.
+        fascicles_angles (List[float]): Angles (in radians) for each fascicle branch.
+        fascicles_length (List[float]): Lengths for each fascicle branch; matches `fascicles_angles`.
 
     Notes:
-        - The second_node_id should not be directly connected to init_node_id by a single edge in the mesh to avoid numerical issues.
-        - Fascicles are straight branches with different lengths and angles, motivated by the fascicles of the left ventricle.
-        - To avoid negative branch lengths, ensure randomization parameters are set appropriately.
+        - `second_node_id` should not be adjacent to `init_node_id` in the mesh to avoid numeric instability.
+        - Fascicles represent straight sub-branches inspired by cardiac fascicles.
+        - Set parameters to prevent negative branch lengths when randomization is applied.
     """
 
     def __init__(self) -> None:

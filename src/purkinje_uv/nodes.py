@@ -1,3 +1,9 @@
+"""Module defining the Nodes class for managing tree nodes and spatial queries.
+
+This module provides the Nodes class, which stores branch nodes and offers methods
+to compute distances, collisions, and gradients via KD‐trees.
+"""
+
 import numpy as np
 from scipy.spatial import cKDTree
 from typing import Any, List, Sequence, Tuple, Union
@@ -5,18 +11,17 @@ from numpy.typing import NDArray
 
 
 class Nodes:
-    """A class containing the nodes of the branches plus some fuctions to compute distance related quantities.
+    """Manage nodes and compute spatial queries for a tree structure.
 
-    Args:
-        init_node (array): an array with the coordinates of the initial node of the first branch.
+    The Nodes class stores branch nodes and provides methods to compute
+    distances, collisions, and gradients using k-d trees.
 
     Attributes:
-        nodes (list): list of arrays containing the coordinates of the nodes
-        last_node (int): last added node.
-        end_nodes (list): a list containing the indices of all end nodes (nodes that are not connected) of the tree.
-        tree (scipy.spatial.cKDTree): a k-d tree to compute the distance from any point to the closest node in the tree. It is updated once a branch is finished.
-        collision_tree (scipy.spatial.cKDTree): a k-d tree to compute the distance from any point to the closest node in the tree, except from the brother and mother branches. It is used to check collision between branches.
-
+        nodes (List[NDArray[Any]]): Coordinates of all nodes.
+        last_node (int): Index of the most recently added node.
+        end_nodes (List[int]): Indices of terminal nodes (not connected).
+        tree (cKDTree): KD-tree of all nodes for nearest-neighbor queries.
+        collision_tree (cKDTree): KD-tree excluding certain nodes for collision checks.
     """
 
     nodes: List[NDArray[Any]]
@@ -24,19 +29,24 @@ class Nodes:
     tree: cKDTree
 
     def __init__(self, init_node: NDArray[Any]) -> None:
+        """Initialize with a single starting node.
+
+        Args:
+            init_node (NDArray[Any]): Coordinates of the initial branch node.
+        """
         self.nodes = [init_node]
         self.last_node = 0
         self.end_nodes = []
         self.tree = cKDTree(self.nodes)
 
     def add_nodes(self, queue: Sequence[NDArray[Any]]) -> List[int]:
-        """This function stores a list of nodes of a branch and returns the node indices. It also updates the tree to compute distances.
+        """Append a sequence of new nodes and rebuild the KD-tree.
 
         Args:
-            queue (list): a list of arrays containing the coordinates of the nodes of one branch.
+            queue (Sequence[NDArray[Any]]): Coordinates of nodes to add.
 
         Returns:
-            nodes_id (list): the indices of the added nodes.
+            List[int]: Indices of the newly added nodes.
         """
         nodes_id: List[int] = []
         for point in queue:
@@ -47,40 +57,40 @@ class Nodes:
         return nodes_id
 
     def distance_from_point(self, point: Union[NDArray[Any], Sequence[float]]) -> float:
-        """This function returns the distance from any point to the closest node in the tree.
+        """Compute distance from an arbitrary point to the nearest node.
 
         Args:
-            point (array): the coordinates of the point to calculate the distance from.
+            point (Union[NDArray[Any], Sequence[float]]): Query coordinates.
 
         Returns:
-            d (float): the distance between point and the closest node in the tree.
+            float: Distance to the closest node.
         """
         res = self.tree.query(point)
         d = float(res[0])
         return d
 
     def distance_from_node(self, node: int) -> float:
-        """This function returns the distance from any node to the closest node in the tree.
+        """Compute distance from one node to its nearest neighbor in the tree.
 
         Args:
-            node (int): the index of the node to calculate the distance from.
+            node (int): Index of the node to query.
 
         Returns:
-            d (float): the distance between specified node and the closest node in the tree.
+            float: Distance to the closest other node.
         """
         res = self.tree.query(self.nodes[node])
         d = float(res[0])
         return d
 
     def update_collision_tree(self, nodes_to_exclude: Sequence[int]) -> None:
-        """
-        Update the collision_tree by excluding specified nodes.
-        If no nodes remain, insert one distant dummy point so the KD‐tree never ends up empty.
+        """Rebuild the collision tree excluding specified nodes.
+
+        If all nodes are excluded, inserts a distant dummy point
+        so the KD-tree remains non-empty.
 
         Args:
-            nodes_to_exclude (Sequence[int]): Indices of nodes to exclude.
+            nodes_to_exclude (Sequence[int]): Indices to omit from collision checks.
         """
-
         nodes: set[int] = set(range(len(self.nodes)))
         nodes = nodes.difference(nodes_to_exclude)
         nodes_to_consider: List[NDArray[Any]] = [self.nodes[i] for i in nodes]
@@ -97,8 +107,13 @@ class Nodes:
     def collision(
         self, point: Union[NDArray[Any], Sequence[float]]
     ) -> Tuple[int, float]:
-        """
-        Return (node_index, distance) for the closest node to `point` using the collision_tree.
+        """Find the nearest node (excluding excluded ones) to a query point.
+
+        Args:
+            point (Union[NDArray[Any], Sequence[float]]): Query coordinates.
+
+        Returns:
+            Tuple[int, float]: (node_index, distance) to the closest node.
         """
         res = self.collision_tree.query(point)
         d = float(res[0])
@@ -106,15 +121,17 @@ class Nodes:
         return (self.nodes_to_consider_keys[idx], d)
 
     def gradient(self, point: Union[NDArray[Any], Sequence[float]]) -> NDArray[Any]:
-        """This function returns the gradient of the distance from the existing points of the tree from any point. It uses a central finite difference approximation.
+        """Approximate the gradient of the distance field at a point.
+
+        Uses a central difference if needed, but by default returns a unit vector
+        pointing away from the nearest node.
 
         Args:
-            point (array): the coordinates of the point to calculate the gradient of the distance from.
+            point (Union[NDArray[Any], Sequence[float]]): Query coordinates.
 
         Returns:
-            grad (array): (x,y,z) components of gradient of the distance.
+            NDArray[Any]: (dx, dy, dz) gradient components.
         """
-
         arr = np.array(point, dtype=float)
         res = self.tree.query(arr)
         d = float(res[0])

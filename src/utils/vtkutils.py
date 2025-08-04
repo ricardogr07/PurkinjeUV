@@ -1,3 +1,11 @@
+"""Module provides VTK utility functions for NumPy and IGB conversion.
+
+This module includes helpers to:
+  - Convert NumPy arrays into vtkUnstructuredGrid.
+  - Read IGB files into vtkImageData.
+  - Extract boundary surfaces from volumetric datasets.
+"""
+
 from typing import Any
 import vtk
 import numpy as np
@@ -11,8 +19,17 @@ def vtk_unstructuredgrid_from_list(
     cells: np.ndarray[Any, Any],
     vtk_type: int,
 ) -> vtk.vtkUnstructuredGrid:
-    "Creates VTK ugrid from list of points and edges"
+    """Create a VTK unstructured grid from points and cell connectivity.
 
+    Args:
+        xyz (np.ndarray[Any, Any]): Array of point coordinates, shape (n_points, 3).
+        cells (np.ndarray[Any, Any]): Array of cell-vertex indices,
+            shape (n_cells, n_vertices_per_cell).
+        vtk_type (int): VTK cell type constant (e.g., vtk.VTK_LINE).
+
+    Returns:
+        vtk.vtkUnstructuredGrid: Constructed unstructured grid with the given points and cells.
+    """
     # points directly from array
     vtk_points = vtk.vtkPoints()
     vtk_points.SetData(numpy_to_vtk(xyz))
@@ -40,8 +57,18 @@ def vtkIGBReader(
     scale: float = 1.0,
     origin: float = 0.0,
 ) -> vtk.vtkImageData:
-    "Convert to VTK image"
+    """Read an IGB file and return VTK image data.
 
+    Args:
+        fname (str): Path to the IGB file.
+        name (str): Name of the scalar array to assign.
+        cell_centered (bool): If True, convert cell-centered data to VTK cell data.
+        scale (float): Spacing to apply on each axis.
+        origin (float): Origin coordinate to apply on each axis.
+
+    Returns:
+        vtk.vtkImageData: The resulting VTK image data object.
+    """
     # first we check the header
     hdr = IGBReader.read_header(fname)
 
@@ -93,8 +120,15 @@ def vtk_extract_boundary_surfaces(
     vtk_cell: vtk.vtkDataSet,
     triangulate: bool = False,
 ) -> vtk.vtkPolyData:
-    "Extract left/right endocardium from the cell file"
+    """Extract boundary surfaces (e.g., endocardium) from volumetric cell data.
 
+    Args:
+        vtk_cell (vtk.vtkDataSet): Volumetric dataset with cell-centered scalars.
+        triangulate (bool): If True, apply triangulation to the output surface.
+
+    Returns:
+        vtk.vtkPolyData: Surface mesh of the extracted boundary.
+    """
     # use Extent and not Dimensions because data are cell-centered
     nx, ny, nz = vtk_cell.GetExtent()[1::2]
 

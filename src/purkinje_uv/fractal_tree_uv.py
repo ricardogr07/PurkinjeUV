@@ -1,3 +1,10 @@
+"""Module defining the FractalTree class to generate fractal trees within a mesh domain.
+
+This module implements UV-based fractal tree growth using geometric rules,
+collision detection, and iterative branching to create a tree structure
+embedded in a 3D mesh.
+"""
+
 import logging
 from collections import defaultdict
 from typing import Any, Tuple, List, Dict, DefaultDict, Optional, Sequence
@@ -16,36 +23,26 @@ logger = logging.getLogger(__name__)
 
 
 class FractalTree:
-    """
-    FractalTree generates a fractal tree structure within a given mesh domain using UV mapping and geometric rules.
+    """Generate a fractal tree structure within a mesh using UV mapping.
 
-    Attributes
-    m : Mesh
-        The mesh object loaded from the provided mesh file.
-    mesh_uv : Mesh
-        The mesh object in UV space.
-    loc : vtk.vtkCellLocator
-        VTK cell locator for efficient spatial queries.
-    scaling_nodes : np.ndarray
-        Array of scaling factors for mesh nodes.
-    params : Any
-        Parameters for tree growth and mesh configuration.
-    uv_nodes : np.ndarray
-        Array of node coordinates in UV space.
-    edges : List[Edge]
-        List of edges representing the tree branches.
-    end_nodes : List[int]
-        List of indices of terminal nodes.
-    connectivity : List[List[int]]
-        List of edge connectivity pairs.
-    nodes_xyz : List[np.ndarray]
-        List of node coordinates in XYZ space.
+    This class handles:
+    - Loading and embedding a mesh in UV space.
+    - Iterative growth of a main branch and fascicles.
+    - Collision avoidance via KD-trees.
+    - Reconstruction of 3D node coordinates from UV.
+    - Exporting the final tree as a line mesh.
 
-    Methods
-    -------
-    grow_tree() -> None
-        Generates the fractal tree structure by iteratively growing and branching according to geometric and collision rules.
-    save(filename: str) -> None
+    Attributes:
+        mesh (Mesh): Original 3D mesh loaded from file.
+        mesh_uv (Mesh): Mesh mapped into UV coordinates, embedded as 3D.
+        loc (vtk.vtkCellLocator): VTK locator for mesh spatial queries.
+        scaling_nodes (NDArray[Any]): Node-wise UV scaling factors.
+        params (Parameters): Growth parameters and mesh settings.
+        uv_nodes (NDArray[Any]): Final node coordinates in UV space.
+        edges (List[Edge]): List of edges defining the tree connectivity.
+        end_nodes (List[int]): Indices of terminal (leaf) nodes.
+        connectivity (List[List[int]]): Edge pairs for mesh export.
+        nodes_xyz (List[NDArray[Any]]): Final node coordinates in 3D space.
     """
 
     mesh: Mesh
@@ -60,21 +57,17 @@ class FractalTree:
     nodes_xyz: List[NDArray[Any]]
 
     def __init__(self, params: Parameters) -> None:
-        """
-        Initializes the fractal tree UV mapping object.
+        """Initialize the fractal tree generator with given parameters.
+
         Args:
-            params (Parameters): An object containing parameters for mesh file path and other settings.
-        Attributes:
-            m (Mesh): The original mesh loaded from the file specified in params.
-            mesh_uv (Mesh): A mesh object with UV coordinates extended to 3D.
-            loc (vtk.vtkCellLocator): VTK cell locator for spatial queries on the mesh.
-            scaling_nodes (np.ndarray): Array of node scaling values interpolated from the UV scaling.
-            params (Any): Stores the input parameters for later use.
+            params (Parameters): Configuration object with meshfile, branch lengths,
+                angles, and other settings.
 
         Raises:
-            Any exceptions raised by Mesh, pv.read, or VTK methods will propagate.
+            TypeError: If `params` is not a Parameters instance.
+            ValueError: If `params.meshfile` is not provided.
+            RuntimeError: On missing UV map or scaling after computation.
         """
-
         if not isinstance(params, Parameters):
             raise TypeError(
                 "The parameters must be an instance of the Parameters class"
@@ -127,16 +120,15 @@ class FractalTree:
         r: float,
         t: float,
     ) -> NDArray[Any]:
-        """
-        Interpolates between three vectors using barycentric coordinates.
+        """Interpolate three vectors using barycentric weights.
 
         Args:
-            vectors: Sequence of three NumPy arrays (vectors) to blend.
-            r: Weight for the second vector.
-            t: Weight for the third vector.
+            vectors (Sequence[NDArray[Any]]): List of three vectors.
+            r (float): Weight for the second vector.
+            t (float): Weight for the third vector.
 
         Returns:
-            A NumPy array representing t*vectors[2] + r*vectors[1] + (1−r−t)*vectors[0].
+            NDArray[Any]: Weighted sum: t*vectors[2] + r*vectors[1] + (1−r−t)*vectors[0].
         """
         result: NDArray[Any] = (
             t * vectors[2] + r * vectors[1] + (1 - r - t) * vectors[0]
@@ -149,19 +141,18 @@ class FractalTree:
         field: NDArray[Any],
         mesh: Mesh,
     ) -> Tuple[NDArray[Any], NDArray[Any], int]:
-        """
-        Evaluates a scalar or vector field at `point` by projecting onto `mesh`
-        and interpolating using barycentric coordinates.
+        """Project a point onto `mesh` and interpolate `field` there.
 
         Args:
-            point: (n,)-shaped array of coordinates to evaluate.
-            field: (n_nodes, ...)-shaped array of field values at mesh nodes.
-            mesh: Mesh object supporting `project_new_point` and `.connectivity`.
+            point (NDArray[Any]): (3,)-array of XYZ coordinates.
+            field (NDArray[Any]): (n_nodes, …) array of values at mesh nodes.
+            mesh (Mesh): Mesh supporting `project_new_point`.
 
         Returns:
-            interpolated: Field value at the projected point.
-            ppoint: Coordinates of the projected point.
-            tri: Index of the triangle containing the projection.
+            Tuple[NDArray[Any], NDArray[Any], int]:
+                - interpolated field value at projection,
+                - projected 3D point,
+                - triangle index containing the projection.
         """
         ppoint, tri, r, t = mesh.project_new_point(point, 5)
         interpolated: NDArray[Any] = self._interpolate(
@@ -170,15 +161,14 @@ class FractalTree:
         return interpolated, ppoint, tri
 
     def _point_in_mesh(self, point: NDArray[Any], mesh: Mesh) -> bool:
-        """
-        Determines whether a given point is inside the specified mesh.
+        """Check if a 2D point lies inside `mesh` by barycentric projection.
 
         Args:
-            point: 2D coordinates of the point to check.
-            mesh: Mesh object to test against.
+            point (NDArray[Any]): (2,)-array of UV coordinates.
+            mesh (Mesh): Mesh for testing.
 
         Returns:
-            True if the point is inside the mesh, False otherwise.
+            bool: True if the point is inside, False otherwise.
         """
         point_3d: NDArray[Any] = np.append(point, np.zeros(1, dtype=float))
         _, tri, _, _ = mesh.project_new_point(point_3d, 5)
@@ -189,15 +179,14 @@ class FractalTree:
         point: NDArray[Any],
         loc: vtk.vtkCellLocator,
     ) -> bool:
-        """
-        Determines whether a given point is inside a mesh using VTK's cell locator.
+        """Check mesh containment using VTK’s cell locator.
 
         Args:
-            point: 2D or 3D coordinates of the point to check.
-            loc: The VTK cell locator associated with the mesh.
+            point (NDArray[Any]): (2 or 3)-array of coordinates.
+            loc (vtk.vtkCellLocator): Locator built on the UV-mesh.
 
         Returns:
-            True if the point is inside the mesh (within a tolerance), False otherwise.
+            bool: True if within tolerance of a cell, False otherwise.
         """
         # Ensure the point is 3D: if 2D, append zero z-coordinate
         point_3d: NDArray[Any] = np.append(point, np.zeros(1, dtype=float))
@@ -212,16 +201,13 @@ class FractalTree:
         return inside
 
     def _scaling(self, x: NDArray[Any]) -> Tuple[float, int]:
-        """
-        Calculates the scaling factor and triangle index for a given point.
-        Appends a zero to the input array `x`, finds the closest point on the mesh using VTK,
-        and determines the corresponding triangle index. If the distance to the closest point
-        is greater than 1e-3, returns -1 as the triangle index. Otherwise, returns the scaling
-        factor from `self.mesh.uvscaling` for the found triangle.
+        """Compute scaling factor and triangle index for UV point `x`.
+
         Args:
-            x (np.ndarray): Input point coordinates.
+            x (NDArray[Any]): (2,)-array of UV coordinates.
+
         Returns:
-            tuple[float, int]: A tuple containing the square root of the scaling factor and the triangle index.
+            Tuple[float, int]: (sqrt(scaling), triangle index) or (-1.0, -1) if outside.
         """
         x3d: NDArray[Any] = np.append(x, np.zeros(1, dtype=float))
         cellId = vtk.reference(0)
@@ -248,16 +234,7 @@ class FractalTree:
         nodes: List[NDArray[Any]],
         new_node: NDArray[Any],
     ) -> int:
-        """
-        Adds a new node to the nodes list and returns its index.
-
-        Args:
-            nodes: List of existing node coordinates (NumPy arrays).
-            new_node: A NumPy array for the new node coordinates.
-
-        Returns:
-            The index of the newly added node.
-        """
+        """Append `new_node` to `nodes` list and return its index."""
         nodes.append(new_node)
         return len(nodes) - 1
 
@@ -268,16 +245,7 @@ class FractalTree:
         grad_dist: Optional[NDArray[Any]] = None,
         w: float = 0.0,
     ) -> NDArray[Any]:
-        """
-        Computes a new direction vector by applying a rotation and optionally adding a weighted gradient.
-        Args:
-            dir (np.ndarray): The current direction vector.
-            rotation (np.ndarray): The rotation matrix to apply.
-            grad_dist (np.ndarray, optional): Gradient direction for collision avoidance.
-            w (float, optional): Weight for the gradient direction.
-        Returns:
-            np.ndarray: The normalized new direction vector.
-        """
+        """Rotate `dir` by `rotation` and optionally add `w*grad_dist`, then normalize."""
         result: NDArray[Any] = np.matmul(rotation, dir)
         if grad_dist is not None and w != 0.0:
             result = result + w * grad_dist
@@ -289,14 +257,7 @@ class FractalTree:
         new_node: NDArray[Any],
         loc: vtk.vtkCellLocator,
     ) -> bool:
-        """
-        Checks if a new node can be grown to (i.e., is inside the mesh domain).
-        Args:
-            new_node (np.ndarray): The candidate node position.
-            loc (vtk.vtkCellLocator): The mesh locator.
-        Returns:
-            bool: True if the node is inside the mesh, False otherwise.
-        """
+        """Return True if `new_node` lies inside the UV-mesh via VTK locator."""
         return self._point_in_mesh_vtk(new_node, loc)
 
     def _collision_check(
@@ -308,21 +269,12 @@ class FractalTree:
         dx: float,
         s: float,
     ) -> Tuple[bool, Optional[NDArray[Any]]]:
-        """
-        Checks if extending an edge would result in a collision with other nodes, and computes the gradient direction.
-
-        Args:
-            nodes (list): List of current node coordinates.
-            branches (dict): Mapping from branch IDs to node indices.
-            sister_branches (dict): Mapping from a branch ID to its sister.
-            edge (Edge): The current edge to be extended.
-            dx (float): Segment length.
-            s (float): Local scaling factor.
+        """Test whether extending `edge` by `dx*s` collides with existing nodes.
 
         Returns:
-            Tuple:
-                - collision (bool): Whether the new node would collide with existing ones.
-                - grad_dist (np.ndarray): Gradient direction to push away from nearest node (for repulsion).
+            Tuple[bool, Optional[NDArray[Any]]]:
+                - True if collision detected (no gradient).
+                - False and a repulsion gradient vector otherwise.
         """
         pred_node: NDArray[Any] = nodes[edge.n2]  # predicted new point location
         # Stack nodes for vectorized distance computation
@@ -357,12 +309,7 @@ class FractalTree:
         dx: float,
         init_branch_length: float,
     ) -> int:
-        """
-        Grows the initial branch of the fractal tree by iteratively adding new nodes and edges.
-
-        This method pops the first edge from the edge queue and extends it by repeatedly adding new nodes
-        along the direction of the edge, scaled by a factor determined by the `_scaling` method. Each new node
-        is appended to the corresponding branch and a new edge is created and added to the edge queue.
+        """Grow and queue nodes along the main branch for length `init_branch_length`.
 
         Args:
             edge_queue (List[int]): Queue of edge indices to be processed.
@@ -407,8 +354,7 @@ class FractalTree:
         branch_id: int,
         dx: float,
     ) -> None:
-        """
-        Grows fascicles from a given branching edge in a fractal tree structure.
+        """Branch off short fascicles at `branching_edge_id`, then queue their growth.
 
         Args:
             branching_edge_id (int): The index of the edge from which fascicles will branch.
@@ -494,33 +440,7 @@ class FractalTree:
         end_nodes: List[int],
         sister_branches: Dict[int, int],
     ) -> None:
-        """
-        Simulates the iterative growth of a fractal tree structure over multiple generations.
-        This method alternates between branching and growing steps for a specified number of generations,
-        updating the tree's edges, nodes, and branches. It handles branching at each edge, checks for collisions,
-        and manages the addition of new nodes and edges. The method also tracks end nodes and sister branches.
-        Args:
-            edges (list): List of Edge objects representing the current tree edges.
-            nodes (list): List of node coordinates (e.g., numpy arrays).
-            branches (dict): Dictionary mapping branch IDs to lists of node indices.
-            edge_queue (list): List of edge indices to process in the current generation.
-            branch_id (int): Current branch identifier, incremented for new branches.
-            dx (float): Step size for growth.
-            branch_length (float): Total length for each branch to grow.
-            w (float): Weight parameter for direction computation.
-            Rplus (np.ndarray): Rotation matrix for one branching direction.
-            Rminus (np.ndarray): Rotation matrix for the other branching direction.
-            end_nodes (list): List to collect indices of nodes where growth ends.
-            sister_branches (dict): Dictionary mapping branch IDs to their sister branch IDs.
-        Returns:
-            None
-        Raises:
-            None
-        Notes:
-            - The method modifies the input lists and dictionaries in place.
-            - Uses helper methods for direction computation, scaling, collision checking, and node addition.
-            - Assumes existence of Edge class and cKDTree for spatial queries.
-        """
+        """Iterate branching and growth steps for `self.params.N_it` generations."""
         for gen in range(self.params.N_it):
             logger.info(f"Generation {gen}")
             branching_queue: List[int] = []
@@ -584,15 +504,7 @@ class FractalTree:
                 edge_queue[:] = growing_queue
 
     def grow_tree(self) -> None:
-        """
-        Generates the full fractal tree by:
-          1. Initializing queues, nodes, edges, and branches.
-          2. Growing the initial main branch.
-          3. Adding fascicles.
-          4. Iterating through generations of branching and growth.
-          5. Recording terminal (end) nodes and building final connectivity.
-          6. Mapping UV‐space nodes back to 3D coordinates.
-        """
+        """Run the full sequence: initial branch, fascicles, generations, and 3D mapping."""
         # Initialization
         branches: DefaultDict[int, List[int]] = defaultdict(list)
         branch_id: int = 0
@@ -674,14 +586,7 @@ class FractalTree:
             self.nodes_xyz.append(val)
 
     def save(self, filename: str) -> None:
-        """
-        Saves the fractal tree structure as a mesh file.
-
-        Parameters
-        ----------
-        filename : str
-            The path to the file where the mesh will be saved.
-        """
+        """Write the final tree connectivity to `filename` using meshio."""
         try:
             # Convert stored node coordinates and edge connectivity to typed arrays
             line_nodes: NDArray[Any] = np.array(self.nodes_xyz, dtype=float)

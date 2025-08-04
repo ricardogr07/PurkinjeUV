@@ -1,3 +1,26 @@
+"""The purkinje_uv package provides tools for generating Purkinje fiber networks.
+
+This package offers:
+  - Fractal tree construction on surface meshes.
+  - Activation solvers for Purkinje networks.
+  - Finite-element utilities for surface analysis.
+
+Submodules:
+  - branch: Branch growth logic.
+  - edge: Edge abstraction for tree connectivity.
+  - fractal_tree_uv: FractalTree generation in UV space.
+  - fractal_tree_parameters: Parameter container for tree generation.
+  - mesh: Mesh class with geometry and FEM utilities.
+  - nodes: Node management and collision/gradient utilities.
+  - purkinje_tree: Activation solver on the Purkinje network.
+
+Classes:
+  Branch, Edge, FractalTree, Parameters, Mesh, Nodes, PurkinjeTree
+
+Utilities:
+  IGBReader, VTUWriter, vtkutils
+"""
+
 from purkinje_uv.branch import Branch
 from purkinje_uv.edge import Edge
 from purkinje_uv.fractal_tree_uv import FractalTree
@@ -11,12 +34,12 @@ from utils.paraview_writer import VTUWriter
 import utils.vtkutils as vtkutils
 
 __all__ = [
+    "Branch",
     "Edge",
     "FractalTree",
-    "Mesh",
     "Parameters",
+    "Mesh",
     "Nodes",
-    "Branch",
     "PurkinjeTree",
     "IGBReader",
     "VTUWriter",
