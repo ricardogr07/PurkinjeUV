@@ -33,6 +33,8 @@ repos:
     hooks:
       - id: pydocstyle
         additional_dependencies: ["toml"]
+        files: ^src/
+
 
   # TODO: Add checks for testing
   # - repo: local
