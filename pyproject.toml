@@ -50,6 +50,7 @@ check_untyped_defs = true
 
 [tool.pydocstyle]
 convention = "google"
+match-dir = "^src"
 match      = ".*\\.py"
 add-ignore = ["D105", "D107"]
 
