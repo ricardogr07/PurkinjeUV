@@ -64,7 +64,7 @@ add-ignore = ["D105", "D107"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
-addopts = "--cov=purkinje_uv --cov=purkinje_uv.utils --cov-report=term --cov-report=html --cov-fail-under=80 -ra -q"
+addopts = "--cov=purkinje_uv --cov=utils --cov-report=term --cov-report=html --cov-fail-under=80 -ra -q"
 testpaths  = ["tests"]
 
 [tool.tox]
