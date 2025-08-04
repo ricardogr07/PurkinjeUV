@@ -1,3 +1,11 @@
+"""Module for eikonal activation on a Purkinje fiber network.
+
+This module defines the PurkinjeTree class, which wraps a line-based
+Purkinje fiber mesh, computes activation times using the Fast Iterative
+Method (FIM), and provides utilities for exporting results to VTK and
+meshio formats.
+"""
+
 import numpy as np
 from collections import Counter
 from itertools import chain
@@ -16,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 class PurkinjeTree:
-    "Class for eikonal solver on Purkinje tree"
+    """Perform eikonal activation on a Purkinje network using FIM solver."""
 
     def __init__(
         self,
@@ -24,8 +32,16 @@ class PurkinjeTree:
         connectivity: Sequence[Sequence[int]],
         end_nodes: Sequence[int],
     ) -> None:
-        "Init from FractalTree generator"
+        """Initialize a PurkinjeTree.
 
+        Constructs the VTK representation of a Purkinje fiber network,
+        sets up activation array, and stores Purkinje-myocardial junctions.
+
+        Args:
+            nodes (Sequence[NDArray[Any]]): List of (x, y, z) coordinates for each node.
+            connectivity (Sequence[Sequence[int]]): List of (start, end) index pairs defining line elements.
+            end_nodes (Sequence[int]): Indices of Purkinje-myocardial junction nodes.
+        """
         self.connectivity = np.array(connectivity, dtype=int)
         self.xyz = np.array(nodes)
 
@@ -58,17 +74,16 @@ class PurkinjeTree:
         x0_vals: NDArray[Any],
         return_only_pmj: bool = True,
     ) -> NDArray[Any]:
-        '''Activate tree with FIM solver.
+        """Compute activation times using the Fast Iterative Method (FIM).
 
         Args:
-            x0: Starting node indices (array of ints).
-            x0_vals: Values at starting nodes (array of floats).
-            return_only_pmj: If True, return activation only at PMJ nodes.
+            x0 (NDArray[Any]): Array of source node indices.
+            x0_vals (NDArray[Any]): Activation values at each source node.
+            return_only_pmj (bool): If True, return activation times only at PMJ nodes.
 
         Returns:
-            Numpy array of activation values.
-        '''
-
+            NDArray[Any]: Activation times for all nodes or only PMJ nodes.
+        """
         logger.info("Activating Purkinje tree with FIM solver")
 
         xyz = self.xyz
@@ -90,10 +105,10 @@ class PurkinjeTree:
             return act
 
     def save(self, fname: str) -> None:
-        """Save tree to VTK file.
+        """Write the current activation state to a VTK UnstructuredGrid file.
 
         Args:
-            fname: Output VTK file path.
+            fname (str): Path to the output .vtu file.
         """
         logger.info(f"Saving PurkinjeTree to VTK at {fname}")
 
@@ -103,8 +118,11 @@ class PurkinjeTree:
         writer.Update()
 
     def save_pmjs(self, fname: str) -> None:
-        "Save the junctions as VTP"
+        """Export PMJ nodes and their activation values as a VTP file.
 
+        Args:
+            fname (str): Path to the output .vtp file.
+        """
         logger.info(f"Saving PMJs to VTP at {fname}")
 
         xyz = self.xyz[self.pmj]
@@ -120,8 +138,11 @@ class PurkinjeTree:
         mesh.write(fname)
 
     def get_pmjs_activation(self) -> NDArray[Any]:
-        "Return the current activation values at PMJs"
+        """Retrieve activation times at the Purkinje-myocardial junction nodes.
 
+        Returns:
+            NDArray[Any]: Activation times indexed by PMJ node order.
+        """
         da = dsa.WrapDataObject(self.vtk_tree)
         act: NDArray[Any] = da.PointData["activation"]
         return act[self.pmj]
@@ -132,8 +153,13 @@ class PurkinjeTree:
         point_data: Optional[Dict[str, Any]] = None,
         cell_data: Optional[Dict[str, Any]] = None,
     ) -> None:
-        "Save with meshio"
+        """Export the Purkinje tree as a meshio Mesh with line cells.
 
+        Args:
+            fname (str): Path to the output file (format inferred by extension).
+            point_data (Optional[Dict[str, Any]]): Optional per-node data arrays.
+            cell_data (Optional[Dict[str, Any]]): Optional per-cell data arrays.
+        """
         logger.info(f"Saving PurkinjeTree to meshio format at {fname}")
 
         xyz = self.xyz
@@ -145,12 +171,19 @@ class PurkinjeTree:
         mesh.write(fname)
 
     def extract_edges(self) -> NDArray[Any]:
-        """Return the list of edges from the original connectivity array."""
+        """Return the edge connectivity array for the Purkinje tree.
+
+        Returns:
+            NDArray[Any]: Array of shape (n_edges, 2) listing node index pairs.
+        """
         return self.connectivity
 
     def extract_pmj_counter(self) -> List[int]:
-        """Compute leaf-node IDs (degree == 1) entirely in Python."""
+        """Compute PMJ node indices using a pure Python counter on connectivity.
 
+        Returns:
+            List[int]: Nodes with degree equal to one.
+        """
         # Flatten our connectivity array into individual node IDs
         flattened = chain.from_iterable(self.connectivity.tolist())
         counts = Counter(flattened)
@@ -159,8 +192,11 @@ class PurkinjeTree:
         return [node for node, deg in counts.items() if deg == 1]
 
     def extract_pmj_np_bincount(self) -> NDArray[Any]:
-        """Compute leaf-node IDs (degree == 1) using numpy bin-count."""
+        """Compute PMJ node indices by numpy bincount on flattened connectivity.
 
+        Returns:
+            NDArray[Any]: Nodes with degree equal to one.
+        """
         # Flatten the connectivity array (shape (E,2)) into a 1D sequence of node indices
         flat = self.connectivity.ravel()
         counts = np.bincount(flat)
@@ -169,8 +205,11 @@ class PurkinjeTree:
         return np.where(counts == 1)[0]
 
     def extract_pmj_np_unique(self) -> NDArray[Any]:
-        """Compute leaf-node IDs (degree == 1) using numpy unique."""
+        """Compute PMJ node indices via numpy unique and count filtering.
 
+        Returns:
+            NDArray[Any]: Nodes with degree equal to one.
+        """
         # Flatten the connectivity array into a 1D sequence of node indices
         flat = self.connectivity.ravel()
         nn, cnt = np.unique(flat, return_counts=True)
