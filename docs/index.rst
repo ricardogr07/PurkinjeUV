@@ -1,0 +1,25 @@
+Welcome to the purkinje-uv documentation!
+=====================================
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Contents:
+
+   api/modules
+
+Introduction
+------------
+
+`purkinje-uv` is a Python library for generating Purkinje networks using fractal trees mapped onto cardiac mesh surfaces.
+It includes geometric tools, network generation logic, and activation solvers.
+
+Mermaid Example
+---------------
+
+.. mermaid::
+
+   graph TD
+       Start --> Mesh[Create Mesh]
+       Mesh --> Tree[Generate FractalTree]
+       Tree --> Network[Build PurkinjeTree]
+       Network --> Sim[Run Activation Solver]
