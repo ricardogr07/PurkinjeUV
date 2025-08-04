@@ -1,21 +1,22 @@
+"""Module providing IGBReader for reading IGB (Image Grid Binary) files.
+
+This module defines the IGBReader class with methods to parse IGB headers
+and to load the binary data into NumPy arrays with optional scaling.
+"""
+
 import numpy as np
 from typing import Dict, Any, Tuple, Union
 from numpy.typing import NDArray
 
 
 class IGBReader:
-    """
-    IGBReader provides static methods to read and parse IGB (Image Grid Binary) files.
+    """Read and parse Image Grid Binary (IGB) files.
+
+    Provides static methods to extract header metadata and to load the
+    3D/4D data into NumPy arrays, with optional scaling.
 
     Attributes:
-        _DTYPES (dict): Mapping of IGB type strings to NumPy dtypes.
-
-    Methods:
-        read_header(filename: str) -> dict:
-            Reads and parses the header of an IGB file, returning metadata and comments.
-        read(filename: str, convert_to_float: bool = False, return_header: bool = False):
-            Reads the binary data from an IGB file into a NumPy array, with optional scaling and
-            header return.
+        _DTYPES (Dict[str, Any]): Mapping from IGB type names to NumPy dtypes.
     """
 
     _DTYPES = {
@@ -29,17 +30,16 @@ class IGBReader:
 
     @staticmethod
     def read_header(filename: str) -> Dict[str, Any]:
-        """
-        Reads and parses the header of an IGB file.
+        """Read and parse the header of an IGB file.
 
         Args:
             filename (str): Path to the IGB file.
 
         Returns:
-            dict: Parsed header with metadata and comments.
+            Dict[str, Any]: Parsed header with metadata and comments.
 
         Raises:
-            RuntimeError: If filename is not specified.
+            RuntimeError: If `filename` is empty.
         """
         if not filename:
             raise RuntimeError("No filename specified")
@@ -85,16 +85,16 @@ class IGBReader:
         convert_to_float: bool = False,
         return_header: bool = False,
     ) -> Union[NDArray[Any], Tuple[NDArray[Any], Dict[str, Any]]]:
-        """
-        Reads an IGB file into a NumPy array.
+        """Read binary data from an IGB file into a NumPy array.
 
         Args:
             filename (str): Path to the IGB file.
             convert_to_float (bool): If True, apply scaling using 'zero' and 'facteur'.
-            return_header (bool): If True, return both data and header.
+            return_header (bool): If True, return a tuple of (data, header).
 
         Returns:
-            np.ndarray or (np.ndarray, dict): The data array or a tuple with header.
+            Union[NDArray[Any], Tuple[NDArray[Any], Dict[str, Any]]]:
+                The data array or a (data, header) tuple if `return_header` is True.
         """
         hdr = IGBReader.read_header(filename)
         nx, ny, nz = hdr["x"], hdr["y"], hdr["z"]
