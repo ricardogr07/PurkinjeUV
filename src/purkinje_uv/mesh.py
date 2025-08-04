@@ -1,3 +1,14 @@
+"""Module defining the Mesh class for 3D triangular surface meshes.
+
+This module provides:
+  - Loading from OBJ or direct arrays.
+  - Computation of normals, centroids, connectivity.
+  - KD-tree spatial queries.
+  - FEM routines (B-matrix, stiffness, mass, force).
+
+Designed for fractal tree growth and surface-based FEM analysis.
+"""
+
 import collections
 import logging
 from typing import Any, Optional, List, Dict, Tuple, Sequence, DefaultDict
@@ -13,76 +24,29 @@ logger = logging.getLogger(__name__)
 
 
 class Mesh:
-    """
-    Mesh class for handling 3D triangular surface meshes, supporting geometry, topology, and finite element operations.
-    This class loads a Wavefront .obj file or accepts vertices/connectivity directly, computes triangle normals,
-    builds connectivity structures, and provides methods for geometric queries and finite element calculations.
-        filename (str, optional): Path to the .obj file to load mesh data from.
-        verts (array-like, optional): Vertex coordinates (n_nodes x 3).
-        connectivity (array-like, optional): Triangle connectivity (n_triangles x 3).
-        verts (np.ndarray): Array of vertex coordinates (n_nodes x 3).
-        connectivity (np.ndarray): Array of triangle vertex indices (n_triangles x 3).
-        normals (np.ndarray): Array of triangle normals (n_triangles x 3).
-        node_to_tri (dict): Maps node indices to lists of adjacent triangle indices.
-        tree (scipy.spatial.cKDTree): KD-tree for fast nearest-node queries.
-        centroids (np.ndarray): Triangle centroid coordinates (n_triangles x 3).
-        boundary_edges (list): List of boundary edges as (node1, node2) tuples.
-        uv (np.ndarray): UV coordinates for each node (n_nodes x 2).
-        triareas (np.ndarray): Area of each triangle (n_triangles,).
-        uvscaling (np.ndarray): UV scaling metric per triangle (n_triangles,).
+    """Handle 3D triangular surface meshes.
 
-    Methods:
-        loadOBJ(filename):
-            Load mesh data from a Wavefront .obj file.
-        project_new_point(point, verts_to_search=1):
-            Project a point onto the mesh and find the containing triangle.
-        project_point_check(point, node):
-            Project a point onto the surface near a given node and check triangle inclusion.
-        writeVTU(filename, point_data=None, cell_data=None):
-            Export mesh and data to VTU format using meshio.
-        Bmatrix(element):
-            Compute the B matrix and Jacobian for a triangle (finite element method).
-        gradient(element, u):
-            Compute the gradient of a scalar field over a triangle.
-        StiffnessMatrix(B, J):
-            Compute the local stiffness matrix for a triangle.
-        MassMatrix(J):
-            Compute the local mass matrix for a triangle.
-        ForceVector(B, J, X):
-            Compute the local force vector for a triangle.
-        computeGeodesic(nodes, nodeVals, filename=None, K=None, M=None, dt=10.0):
-            Compute geodesic distances from specified nodes using FEM.
-        computeLaplace(nodes, nodeVals, filename=None):
-            Solve Laplace's equation with Dirichlet boundary conditions.
-        computeLaplacian():
-            Assemble global stiffness and mass matrices for the mesh.
-        uvmap(filename=None):
-            Compute UV mapping for the mesh using Laplace's equation.
-        compute_uvscaling():
-            Compute UV scaling metric for each triangle.
-        detect_boundary():
-            Identify boundary edges of the mesh.
-        uv_bc():
-            Generate UV boundary conditions for boundary nodes.
-        compute_triareas():
-            Compute area for each triangle.
-        tri2node_interpolation(cell_field):
-            Interpolate triangle-based field to nodes using area-weighted averaging.
-    Notes:
-        - Mesh must be a valid triangular surface mesh.
-        - Normals are computed per triangle; ensure correct orientation in .obj file.
-        - Some methods require scipy, numpy, and meshio.
-        - Designed for use in fractal tree growth and finite element analysis on surfaces.
+    Supports geometry, topology, and finite-element operations.
+    It computes normals, centroids, boundary edges; builds KD-trees;
+    and provides FEM element routines, geodesic/Laplace solvers,
+    UV mapping, and interpolation utilities.
 
     Args:
-        filename (str): the path and filename of the .obj file with the mesh.
+        filename (Optional[str]): Path to OBJ file to load mesh from.
+        verts (Optional[NDArray[Any]]): Vertex coordinates (n_nodes×3).
+        connectivity (Optional[NDArray[Any]]): Triangle indices (n_triangles×3).
 
     Attributes:
-        verts (array): a numpy array that contains all the nodes of the mesh. verts[i,j], where i is the node index and j=[0,1,2] is the coordinate (x,y,z).
-        connectivity (array): a numpy array that contains all the connectivity of the triangles of the mesh. connectivity[i,j], where i is the triangle index and j=[0,1,2] is node index.
-        normals (array): a numpy array that contains all the normals of the triangles of the mesh. normals[i,j], where i is the triangle index and j=[0,1,2] is normal coordinate (x,y,z).
-        node_to_tri (dict): a dictionary that relates a node to the triangles that it is connected. It is the inverse relation of connectivity. The triangles are stored as a list for each node.
-        tree (scipy.spatial.cKDTree): a k-d tree to compute the distance from any point to the closest node in the mesh.
+        verts (NDArray[Any]): Vertex array, shape (n_nodes, 3).
+        connectivity (NDArray[Any]): Triangle indices, shape (n_triangles, 3).
+        normals (NDArray[Any]): Triangle normals, shape (n_triangles, 3).
+        node_to_tri (DefaultDict[int, List[int]]): Node→[triangle indices].
+        tree (cKDTree): KD-tree over `verts` for nearest-node queries.
+        centroids (NDArray[Any]): Triangle centroids, shape (n_triangles, 3).
+        boundary_edges (Optional[List[Tuple[int,int]]]): Edges on mesh boundary.
+        uv (Optional[NDArray[Any]]): UV coordinates per node, shape (n_nodes, 2).
+        triareas (Optional[NDArray[Any]]): Triangle areas, shape (n_triangles,).
+        uvscaling (Optional[NDArray[Any]]): UV scaling metric per triangle.
     """
 
     verts: NDArray[Any]
@@ -102,25 +66,13 @@ class Mesh:
         verts: Optional[NDArray[Any]] = None,
         connectivity: Optional[NDArray[Any]] = None,
     ) -> None:
-        """
-        Initialize the Mesh object.
+        """Initialize mesh from OBJ or provided arrays.
 
-        Args:
-            filename (str, optional): Path to the .obj file to load mesh data from.
-            verts (np.ndarray, optional): Vertex coordinates (n_nodes x 3).
-            connectivity (np.ndarray, optional): Triangle connectivity (n_triangles x 3).
+        If `filename` is given, loads verts and connectivity from OBJ.
+        Otherwise, uses provided `verts` and `connectivity` arrays.
 
-        Attributes:
-            verts (np.ndarray): Array of vertex coordinates (n_nodes x 3).
-            connectivity (np.ndarray): Array of triangle vertex indices (n_triangles x 3).
-            normals (np.ndarray): Array of triangle normals (n_triangles x 3).
-            node_to_tri (defaultdict): Maps node indices to lists of adjacent triangle indices.
-            tree (scipy.spatial.cKDTree): KD-tree for fast nearest-node queries.
-            centroids (np.ndarray): Triangle centroid coordinates (n_triangles x 3).
-            boundary_edges (list): List of boundary edges as (node1, node2) tuples.
-            uv (np.ndarray): UV coordinates for each node (n_nodes x 2).
-            triareas (np.ndarray): Area of each triangle (n_triangles,).
-            uvscaling (np.ndarray): UV scaling metric per triangle (n_triangles,).
+        Raises:
+            ValueError: If neither `filename` nor both arrays are provided.
         """
         # Load mesh from file if filename is provided
         if filename is not None:
@@ -172,15 +124,15 @@ class Mesh:
         )
 
     def loadOBJ(self, filename: str) -> Tuple[NDArray[Any], NDArray[Any]]:
-        """
-        This function reads a .obj mesh file
+        """Read a Wavefront .obj mesh file and return (verts, connectivity).
 
         Args:
-            filename (str): the path and filename of the .obj file.
+            filename (str): Path to the .obj file.
 
         Returns:
-             verts (array): a numpy array that contains all the nodes of the mesh. verts[i,j], where i is the node index and j=[0,1,2] is the coordinate (x,y,z).
-             connectivity (array): a numpy array that contains all the connectivity of the triangles of the mesh. connectivity[i,j], where i is the triangle index and j=[0,1,2] is node index.
+            Tuple[NDArray[Any], NDArray[Any]]:
+                - verts: Array of shape (n_vertices, 3)
+                - connectivity: Array of shape (n_triangles, 3)
         """
         numVerts: int = 0
         verts: list[list[float]] = []
@@ -219,16 +171,16 @@ class Mesh:
         point: NDArray[Any],
         verts_to_search: int = 1,
     ) -> Tuple[NDArray[Any], int, float, float]:
-        """This function receives a triangle and project it on the mesh in order to get the index of the triangle where
-        the projected point lies
+        """Project a point onto the mesh and find its containing triangle.
 
         Args:
-            point (array): coordinates of the point to project.
-            verts_to_search (int): the number of verts wich the point is going to be projected
-        Returns:
-             intriangle (int): the index of the triangle where the projected point lies. If the point is outside surface, intriangle=-1.
-        """
+            point (NDArray[Any]): Coordinates to project.
+            verts_to_search (int): Number of nearby vertices to search.
 
+        Returns:
+            Tuple[NDArray[Any], int, float, float]:
+                Projected point, triangle index (−1 if outside), and barycentric coords (r, t).
+        """
         _, idxs = self.tree.query(point, verts_to_search)
         if verts_to_search > 1:
             for node_idx in idxs:
@@ -255,6 +207,7 @@ class Mesh:
         Args:
             point (array): coordinates of the point to project.
             node (int): index of the most close node to the point
+
         Returns:
              projected_point (array): the coordinates of the projected point that lies in the surface.
              intriangle (int): the index of the triangle where the projected point lies. If the point is outside surface, intriangle=-1.
@@ -359,9 +312,7 @@ class Mesh:
         point_data: Optional[Dict[str, NDArray[Any]]] = None,
         cell_data: Optional[Dict[str, NDArray[Any]]] = None,
     ) -> None:
-        """
-        Export this mesh (and optional point/cell data) in VTU format.
-        """
+        """Export this mesh (and optional point/cell data) in VTU format."""
         # Define cells for meshio: (cell_type, connectivity array)
         cells: List[Tuple[str, NDArray[Any]]] = [("triangle", self.connectivity)]
         m_out = meshio.Mesh(self.verts, cells)
@@ -374,8 +325,15 @@ class Mesh:
         m_out.write(filename)
 
     def Bmatrix(self, element: int) -> Tuple[NDArray[Any], float]:
-        """
-        Compute the B‐matrix and determinant J for triangle `element`.
+        """Compute the B-matrix and Jacobian determinant for a triangle.
+
+        Args:
+            element (int): Triangle index.
+
+        Returns:
+            Tuple[NDArray[Any], float]:
+                - B (2×3 array): Strain-displacement matrix.
+                - J (float): Twice the triangle area (Jacobian determinant).
         """
         # Extract vertex coordinates for this triangle
         nodeCoords: NDArray[Any] = self.verts[self.connectivity[element]]
@@ -407,8 +365,14 @@ class Mesh:
         return B, J
 
     def gradient(self, element: int, u: NDArray[Any]) -> NDArray[Any]:
-        """
-        Compute the gradient of a scalar field over triangle `element`.
+        """Compute the gradient of a scalar field over a triangle.
+
+        Args:
+            element (int): Triangle index.
+            u (NDArray[Any]): Field values at the triangle's three vertices.
+
+        Returns:
+            NDArray[Any]: 3-vector of gradients in 3D space.
         """
         node_coords: NDArray[Any] = self.verts[self.connectivity[element]]
         edge_vec: NDArray[Any] = node_coords[1, :] - node_coords[0, :]
@@ -441,15 +405,26 @@ class Mesh:
         return result
 
     def StiffnessMatrix(self, B: NDArray[Any], J: float) -> NDArray[Any]:
-        """
-        Compute the local stiffness matrix for a triangle.
+        """Compute the local stiffness matrix for a triangle.
+
+        Args:
+            B (NDArray[Any]): B-matrix from `Bmatrix`.
+            J (float): Jacobian determinant.
+
+        Returns:
+            NDArray[Any]: 3×3 stiffness matrix.
         """
         result: NDArray[Any] = np.dot(B.T, B) / (2.0 * J)
         return result
 
     def MassMatrix(self, J: float) -> NDArray[Any]:
-        """
-        Compute the local mass matrix for a triangle.
+        """Compute the local mass matrix for a triangle.
+
+        Args:
+            J (float): Jacobian determinant.
+
+        Returns:
+            NDArray[Any]: 3×3 mass matrix.
         """
         result: NDArray[Any] = (
             np.array([[2.0, 1.0, 1.0], [1.0, 2.0, 1.0], [1.0, 1.0, 2.0]], dtype=float)
@@ -464,8 +439,15 @@ class Mesh:
         J: float,
         X: NDArray[Any],
     ) -> NDArray[Any]:
-        """
-        Compute the local force vector for a triangle.
+        """Compute the local force vector for a triangle.
+
+        Args:
+            B (NDArray[Any]): B-matrix from `Bmatrix`.
+            J (float): Jacobian determinant.
+            X (NDArray[Any]): Gradient vector from `gradient`.
+
+        Returns:
+            NDArray[Any]: Length-3 force vector.
         """
         result: NDArray[Any] = np.dot(B.T, X) / 2.0
         return result
@@ -479,10 +461,20 @@ class Mesh:
         M: Optional[sp.spmatrix] = None,
         dt: float = 10.0,
     ) -> Tuple[NDArray[Any], NDArray[Any]]:
-        """
-        Compute geodesic distances from `nodes` with prescribed `nodeVals`
-        using FEM. Returns (ATglobal, Xs), where ATglobal is length-nNodes
-        and Xs is (nElem x 3) array of element gradients.
+        """Compute geodesic distances using the heat method (FEM).
+
+        Args:
+            nodes (Sequence[int]): Indices of fixed-temperature nodes.
+            nodeVals (Sequence[float]): Temperature values at `nodes`.
+            filename (Optional[str]): VTU output path.
+            K (Optional[sp.spmatrix]): Preassembled stiffness matrix.
+            M (Optional[sp.spmatrix]): Preassembled mass matrix.
+            dt (float): Time-step for the heat diffusion.
+
+        Returns:
+            Tuple[NDArray[Any], NDArray[Any]]:
+                - ATglobal: Per-node geodesic distance.
+                - Xs: Per-triangle gradient directions.
         """
         nNodes: int = self.verts.shape[0]
         nElem: int = self.connectivity.shape[0]
@@ -553,8 +545,15 @@ class Mesh:
         nodeVals: Sequence[float] | NDArray[Any],
         filename: Optional[str] = None,
     ) -> NDArray[Any]:
-        """
-        Solve Laplace's equation with Dirichlet boundary conditions at `nodes`.
+        """Solve Laplace's equation with Dirichlet boundary conditions.
+
+        Args:
+            nodes (Sequence[int]): Dirichlet node indices.
+            nodeVals (Sequence[float] | NDArray[Any]): Boundary values.
+            filename (Optional[str]): VTU output path.
+
+        Returns:
+            NDArray[Any]: Solution vector of length n_nodes.
         """
         nNodes = self.verts.shape[0]
 
@@ -592,11 +591,11 @@ class Mesh:
         return Tglobal
 
     def computeLaplacian(self) -> Tuple[sp.spmatrix, sp.spmatrix]:
-        """
-        Assemble and return the global stiffness (K) and mass (M) matrices
-        for the entire mesh as CSR sparse matrices.
-        """
+        """Assemble global stiffness (K) and mass (M) matrices as CSR.
 
+        Returns:
+            Tuple[sp.spmatrix, sp.spmatrix]: (K, M) in CSR format.
+        """
         nNodes: int = self.verts.shape[0]
 
         K: sp.spmatrix = sp.lil_matrix((nNodes, nNodes))
@@ -620,10 +619,11 @@ class Mesh:
         return K.tocsr(), M.tocsr()
 
     def uvmap(self, filename: Optional[str] = None) -> None:
-        """
-        Compute and store UV mapping for the mesh. Optionally export to VTU.
-        """
+        """Compute UV coordinates by solving Laplace's equation.
 
+        Args:
+            filename (Optional[str]): VTU export path for u and v fields.
+        """
         around_nodes: list[int]
         bc_u: NDArray[Any]
         bc_v: NDArray[Any]
@@ -638,10 +638,7 @@ class Mesh:
         self.uv = uv_arr
 
     def compute_uvscaling(self) -> None:
-        """
-        Compute UV‐scaling metric per triangle and store in self.uvscaling.
-        Raises if any triangle appears flipped (negative scaling).
-        """
+        """Compute and validate UV-scaling metric per triangle."""
         if self.uv is None:
             self.uvmap()
         assert self.uv is not None
@@ -663,10 +660,7 @@ class Mesh:
             raise ValueError("Flipped triangles detected — check mesh quality")
 
     def detect_boundary(self) -> None:
-        """
-        Identify boundary edges: edges belonging to exactly one triangle.
-        Stores result in self.boundary_edges as a list of (node1, node2) tuples.
-        """
+        """Identify boundary edges (edges in exactly one triangle)."""
         edge_dict: DefaultDict[Tuple[int, int], List[int]] = collections.defaultdict(
             list
         )
@@ -686,12 +680,11 @@ class Mesh:
         self.boundary_edges = boundary_edges
 
     def uv_bc(self) -> Tuple[List[int], NDArray[Any], NDArray[Any]]:
-        """
-        Generate UV boundary traversal and boundary conditions.
+        """Generate UV boundary loop and boundary conditions.
 
         Returns:
-          around_nodes: List of node indices tracing the boundary loop.
-          bc_u, bc_v: Arrays of boundary condition values for u and v.
+            Tuple[List[int], NDArray[Any], NDArray[Any]]:
+              around_nodes, bc_u, bc_v.
         """
         if self.boundary_edges is None:
             self.detect_boundary()
@@ -735,9 +728,7 @@ class Mesh:
         return around_nodes, bc_u, bc_v
 
     def compute_triareas(self) -> None:
-        """
-        Compute the area of each triangle (J/2) and store as a NumPy array.
-        """
+        """Compute triangle areas (J/2) and store in `self.triareas`."""
         triareas_list: List[float] = []
         for e in range(self.connectivity.shape[0]):
             _, J = self.Bmatrix(e)
@@ -747,8 +738,13 @@ class Mesh:
         self.triareas = triareas_arr
 
     def tri2node_interpolation(self, cell_field: NDArray[Any]) -> List[float]:
-        """
-        Interpolate triangle‐based field to nodes using area‐weighted averaging.
+        """Interpolate triangle-based field to nodes by area-weighting.
+
+        Args:
+            cell_field (NDArray[Any]): Per-triangle values.
+
+        Returns:
+            List[float]: Per-node interpolated values.
         """
         if self.triareas is None:
             self.compute_triareas()
