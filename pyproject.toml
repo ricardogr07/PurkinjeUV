@@ -47,6 +47,7 @@ strict = true
 ignore_missing_imports = true
 disallow_untyped_calls = false
 check_untyped_defs = true
+exclude = '^tests/'
 
 [tool.pydocstyle]
 convention = "google"
@@ -56,7 +57,7 @@ add-ignore = ["D105", "D107"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
-addopts = "--cov=purkinje_uv --cov-fail-under=80 -ra -q"
+addopts = "--cov=purkinje_uv --cov=utils --cov-report=term --cov-report=html --cov-fail-under=80 -ra -q"
 testpaths  = ["tests"]
 
 [tool.tox]
@@ -80,4 +81,5 @@ commands      = [
   "ruff check src/ tests/",
   "mypy src/",
   "pydocstyle src/",
+  "pytest tests/"
 ]
