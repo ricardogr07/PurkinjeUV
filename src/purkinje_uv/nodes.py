@@ -78,8 +78,8 @@ class Nodes:
         Returns:
             float: Distance to the closest other node.
         """
-        res = self.tree.query(self.nodes[node])
-        d = float(res[0])
+        res = self.tree.query(self.nodes[node], k=2)
+        d = float(res[0][1])
         return d
 
     def update_collision_tree(self, nodes_to_exclude: Sequence[int]) -> None:
