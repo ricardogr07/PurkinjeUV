@@ -1,6 +1,9 @@
 # PurkinjeUV
 
-[![PyPI version](https://badge.fury.io/py/purkinje-uv.svg)](https://badge.fury.io/py/purkinje-uv) [![CI](https://github.com/ricardogr07/purkinje-uv/actions/workflows/ci.yml/badge.svg)](https://github.com/ricardogr07/PurkinjeUV/actions/workflows/ci.yml) [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![PyPI version](https://badge.fury.io/py/purkinje-uv.svg)](https://badge.fury.io/py/purkinje-uv)
+[![Test](https://github.com/ricardogr07/purkinje-uv/actions/workflows/test.yml/badge.svg)](https://github.com/ricardogr07/purkinje-uv/actions/workflows/test.yml)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Docs](https://img.shields.io/badge/docs-online-blue)](https://ricardogr07.github.io/purkinje-uv/)
 
 PurkinjeUV is a modular Python package for constructing, simulating, and exporting fractal-based Purkinje networks over anatomical or idealized cardiac surface meshes. It offers a flexible architecture for working with geometries via OBJ, VTK, and GMSH, and supports UV mapping, eikonal solvers, and export utilities.
 
@@ -32,7 +35,15 @@ Install the latest release from PyPI:
 pip install purkinje-uv
 ```
 
+## Documentation
+
+The full documentation is available at:
+
+[https://ricardogr07.github.io/purkinje-uv/](https://ricardogr07.github.io/purkinje-uv/)
+
 ## Getting Started
+
+See [Getting Started Guide](https://ricardogr07.github.io/purkinje-uv/) for full documentation.
 
 ```python
 from purkinje_uv import Parameters
@@ -70,8 +81,8 @@ Runnable notebooks:
 ## Attributions and Credits
 
 Based on the work by [Francisco Sahli](https://github.com/fsahli):
-- fractal-tree: https://github.com/fsahli/fractal-tree  
-- purkinje-learning: https://github.com/fsahli/purkinje-learning  
+- fractal-tree: https://github.com/fsahli/fractal-tree
+- purkinje-learning: https://github.com/fsahli/purkinje-learning
 
 **References:**
 Sahli Costabal, F., Yao, J., & Kuhl, E. (2016). Predicting the cardiac toxicity of drugs using a hybrid multiscale model of the heart. *Journal of the Mechanical Behavior of Biomedical Materials*, 62, 217–231. DOI: 10.1016/j.jmbbm.2016.05.004
