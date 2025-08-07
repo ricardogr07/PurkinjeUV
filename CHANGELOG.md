@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.3.0](https://github.com/ricardogr07/purkinje-uv/compare/v0.2.2...v0.3.0) (2025-08-07)
+
+
+### Features
+
+* add GitHub Actions to deploy docs ([7a87213](https://github.com/ricardogr07/purkinje-uv/commit/7a872139bfa50a0845a474e3e691dbae60943e2e))
+* add interactive labeling functionality with PyVista ([e7403e5](https://github.com/ricardogr07/purkinje-uv/commit/e7403e54ab43e39114058b4ced413272831a876d))
+* add pre commit config with black ruff isort ([#34](https://github.com/ricardogr07/purkinje-uv/issues/34)) ([69b963f](https://github.com/ricardogr07/purkinje-uv/commit/69b963fb2ed5397c37fb3610e4cb33ec1f274c27))
+* enhance GitHub Actions workflow for documentation build and deployment ([7a87213](https://github.com/ricardogr07/purkinje-uv/commit/7a872139bfa50a0845a474e3e691dbae60943e2e))
+
+
+### Documentation
+
+* update README for improved documentation structure and clarity ([#45](https://github.com/ricardogr07/purkinje-uv/issues/45)) ([6a3e588](https://github.com/ricardogr07/purkinje-uv/commit/6a3e588c5fda0c7c855d16c51a1b5dd93b7760b0))
+
 ## [0.2.2](https://github.com/ricardogr07/purkinje-uv/compare/v0.2.1...v0.2.2) (2025-07-24)
 
 
