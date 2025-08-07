@@ -11,10 +11,16 @@ Utilities:
 
 from utils.igb_reader import IGBReader
 from utils.paraview_writer import VTUWriter
-from utils.vtkutils import vtk_unstructuredgrid_from_list
+from utils.vtkutils import (
+    vtk_unstructuredgrid_from_list,
+    vtkIGBReader,
+    vtk_extract_boundary_surfaces,
+)
 
 __all__ = [
     "IGBReader",
     "VTUWriter",
     "vtk_unstructuredgrid_from_list",
+    "vtkIGBReader",
+    "vtk_extract_boundary_surfaces",
 ]

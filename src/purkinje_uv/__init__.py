@@ -31,7 +31,11 @@ from purkinje_uv.purkinje_tree import PurkinjeTree
 
 from utils.igb_reader import IGBReader
 from utils.paraview_writer import VTUWriter
-import utils.vtkutils as vtkutils
+from utils.vtkutils import (
+    vtk_unstructuredgrid_from_list,
+    vtkIGBReader,
+    vtk_extract_boundary_surfaces,
+)
 
 __all__ = [
     "Branch",
@@ -43,5 +47,7 @@ __all__ = [
     "PurkinjeTree",
     "IGBReader",
     "VTUWriter",
-    "vtkutils",
+    "vtk_unstructuredgrid_from_list",
+    "vtkIGBReader",
+    "vtk_extract_boundary_surfaces",
 ]
