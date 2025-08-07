@@ -3130,6 +3130,75 @@ pairs defining each line.</p></li>
 
 </dd></dl>
 
+<dl class="py function">
+<dt class="sig sig-object py" id="purkinje_uv.vtkIGBReader">
+<span class="sig-prename descclassname"><span class="pre">purkinje_uv.</span></span><span class="sig-name descname"><span class="pre">vtkIGBReader</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fname</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'cell'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_centered</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">origin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#purkinje_uv.vtkIGBReader" title="Link to this definition">¶</a></dt>
+<dd><p>Read an IGB file and return VTK image data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fname</strong> (<em>str</em>) – Path to the IGB file.</p></li>
+<li><p><strong>name</strong> (<em>str</em>) – Name of the scalar array to assign.</p></li>
+<li><p><strong>cell_centered</strong> (<em>bool</em>) – If True, convert cell-centered data to VTK cell data.</p></li>
+<li><p><strong>scale</strong> (<em>float</em>) – Spacing to apply on each axis.</p></li>
+<li><p><strong>origin</strong> (<em>float</em>) – Origin coordinate to apply on each axis.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The resulting VTK image data object.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>vtk.vtkImageData</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="purkinje_uv.vtk_extract_boundary_surfaces">
+<span class="sig-prename descclassname"><span class="pre">purkinje_uv.</span></span><span class="sig-name descname"><span class="pre">vtk_extract_boundary_surfaces</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">vtk_cell</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">triangulate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#purkinje_uv.vtk_extract_boundary_surfaces" title="Link to this definition">¶</a></dt>
+<dd><p>Extract boundary surfaces (e.g., endocardium) from volumetric cell data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>vtk_cell</strong> (<em>vtk.vtkDataSet</em>) – Volumetric dataset with cell-centered scalars.</p></li>
+<li><p><strong>triangulate</strong> (<em>bool</em>) – If True, apply triangulation to the output surface.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Surface mesh of the extracted boundary.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>vtk.vtkPolyData</p>
+</dd>
+</dl>
+<p>Notes:
+The reshape of the cell array assumes a structured grid layout.
+Extent values in VTK define the index range: [x0, x1], so the actual
+number of cells along x is (x1 - x0), not x1.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="purkinje_uv.vtk_unstructuredgrid_from_list">
+<span class="sig-prename descclassname"><span class="pre">purkinje_uv.</span></span><span class="sig-name descname"><span class="pre">vtk_unstructuredgrid_from_list</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">xyz</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cells</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vtk_type</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#purkinje_uv.vtk_unstructuredgrid_from_list" title="Link to this definition">¶</a></dt>
+<dd><p>Create a VTK unstructured grid from points and cell connectivity.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>xyz</strong> (<em>np.ndarray</em><em>[</em><em>Any</em><em>, </em><em>Any</em><em>]</em>) – Array of point coordinates, shape (n_points, 3).</p></li>
+<li><p><strong>cells</strong> (<em>np.ndarray</em><em>[</em><em>Any</em><em>, </em><em>Any</em><em>]</em>) – Array of cell-vertex indices,
+shape (n_cells, n_vertices_per_cell).</p></li>
+<li><p><strong>vtk_type</strong> (<em>int</em>) – VTK cell type constant (e.g., vtk.VTK_LINE).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Constructed unstructured grid with the given points and cells.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>vtk.vtkUnstructuredGrid</p>
+</dd>
+</dl>
+</dd></dl>
+
 </section>
 </section>
 
@@ -3466,6 +3535,9 @@ pairs defining each line.</p></li>
 <li><a class="reference internal" href="#purkinje_uv.VTUWriter.write_line_vtu"><code class="docutils literal notranslate"><span class="pre">VTUWriter.write_line_vtu()</span></code></a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#purkinje_uv.vtkIGBReader"><code class="docutils literal notranslate"><span class="pre">vtkIGBReader()</span></code></a></li>
+<li><a class="reference internal" href="#purkinje_uv.vtk_extract_boundary_surfaces"><code class="docutils literal notranslate"><span class="pre">vtk_extract_boundary_surfaces()</span></code></a></li>
+<li><a class="reference internal" href="#purkinje_uv.vtk_unstructuredgrid_from_list"><code class="docutils literal notranslate"><span class="pre">vtk_unstructuredgrid_from_list()</span></code></a></li>
 </ul>
 </li>
 </ul>
