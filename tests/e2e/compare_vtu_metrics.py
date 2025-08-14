@@ -269,9 +269,31 @@ def main(old_path: Path, new_path: Path, out_dir: Path):
 
 
 if __name__ == "__main__":
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--old", type=Path, required=True)
-    ap.add_argument("--new", type=Path, required=True)
-    ap.add_argument("--out", type=Path, default=Path("tests/e2e/output"))
+    here = Path(__file__).resolve()
+    out_dir_default = here.parent / "output"
+    old_default = out_dir_default / "ellipsoid_purkinje.vtu"
+    new_default = out_dir_default / "ellipsoid_purkinje_NEW.vtu"
+
+    ap = argparse.ArgumentParser(description="Compare VTU metrics (OLD vs NEW).")
+    ap.add_argument(
+        "--old",
+        type=Path,
+        default=old_default,
+        help=f"Path to OLD VTU (default: {old_default})",
+    )
+    ap.add_argument(
+        "--new",
+        type=Path,
+        default=new_default,
+        help=f"Path to NEW VTU (default: {new_default})",
+    )
+    ap.add_argument(
+        "--out",
+        type=Path,
+        default=out_dir_default,
+        help=f"Directory for any outputs (default: {out_dir_default})",
+    )
+
     args = ap.parse_args()
+    args.out.mkdir(parents=True, exist_ok=True)
     main(args.old, args.new, args.out)
