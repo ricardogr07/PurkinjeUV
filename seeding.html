@@ -1,13 +1,13 @@
 <!doctype html>
 <html class="no-js" lang="en" data-content_root="./">
-  <head>
-<meta charset="utf-8"/>
+  <head><meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
-    <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="#" />
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="next" title="Developer Notes" href="dev/index.html" /><link rel="prev" title="Workflow" href="usage/workflow.html" />
 
     <!-- Generated with Sphinx 8.1.3 and Furo 2025.07.19 -->
-<meta name="robots" content="noindex" />
-<title>Search - purkinje-uv 0.2.2 documentation</title><link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d111a655" />
+        <title>Anatomical Seeding - purkinje-uv 0.2.2 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d111a655" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=25af2a20" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=8dab3a3b" />
     
@@ -178,7 +178,7 @@
           <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
         </button>
       </div>
-      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
         <div class="visually-hidden">Toggle table of contents sidebar</div>
         <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
       </label>
@@ -191,14 +191,14 @@
   
   <span class="sidebar-brand-text">purkinje-uv 0.2.2 documentation</span>
   
-</a><form class="sidebar-search-container" method="get" action="#" role="search">
+</a><form class="sidebar-search-container" method="get" action="search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
   <input type="hidden" name="check_keywords" value="yes">
   <input type="hidden" name="area" value="default">
 </form>
 <div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
   <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
-<ul>
+<ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="welcome.html">Welcome</a></li>
 <li class="toctree-l1"><a class="reference internal" href="dev/architecture.html">Architecture</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="theory/index.html">Theory &amp; Algorithms</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of Theory &amp; Algorithms</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
@@ -211,7 +211,7 @@
 <li class="toctree-l2"><a class="reference internal" href="usage/workflow.html">Workflow</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="seeding.html">Anatomical Seeding</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Anatomical Seeding</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="dev/index.html">Developer Notes</a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of Developer Notes</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="dev/data_model_invariants.html">Data Model Invariants</a></li>
 <li class="toctree-l2"><a class="reference internal" href="dev/performance.html">Performance</a></li>
@@ -242,7 +242,13 @@
           <span>Back to top</span>
         </a>
         <div class="content-icon-container">
-          <div class="theme-toggle-container theme-toggle-content">
+          <div class="view-this-page">
+  <a class="muted-link" href="_sources/seeding.rst.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
+<div class="theme-toggle-container theme-toggle-content">
             <button class="theme-toggle">
               <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
               <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
@@ -251,31 +257,111 @@
               <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
             </button>
           </div>
-          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
             <div class="visually-hidden">Toggle table of contents sidebar</div>
             <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
           </label>
         </div>
         <article role="main" id="furo-main-content">
-          
-<noscript>
-<div class="admonition error">
-  <p class="admonition-title">Error</p>
-  <p>
-    Please activate JavaScript to enable the search functionality.
-  </p>
-</div>
-</noscript>
+          <section id="anatomical-seeding">
+<h1>Anatomical Seeding<a class="headerlink" href="#anatomical-seeding" title="Link to this heading">¶</a></h1>
+<section id="goal">
+<h2>Goal<a class="headerlink" href="#goal" title="Link to this heading">¶</a></h2>
+<p>Provide initial attachment points for the Purkinje network that respect anatomy, so that
+growth starts in physiologically meaningful locations and covers the intended chambers.</p>
+</section>
+<section id="interfaces">
+<h2>Interfaces<a class="headerlink" href="#interfaces" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Parameters.init_node_id</span></code> – index of the first mesh node (root).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Parameters.second_node_id</span></code> – optional helper to define an initial direction.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Parameters.fascicles_angles</span></code> / <code class="docutils literal notranslate"><span class="pre">Parameters.fascicles_length</span></code> – optional hints for
+adding early fascicles with specified angles/lengths (if used in your workflow).</p></li>
+</ul>
+</section>
+<section id="common-strategies">
+<h2>Common strategies<a class="headerlink" href="#common-strategies" title="Link to this heading">¶</a></h2>
+<ol class="arabic simple">
+<li><p><strong>Label-driven</strong>
+If the endocardial mesh has region labels (e.g., LV septum, anterior/posterior
+fascicles, RV septum), pick the nearest mesh node to each target label centroid.</p></li>
+<li><p><strong>Geometric rules</strong>
+Without labels, derive landmarks from geometry:
+- septal band: nodes with minimal distance to the interventricular plane,
+- apex base axis: principal component direction to distinguish basal/apical halves,
+- anterior/posterior split: plane orthogonal to the apex-base axis.</p></li>
+<li><p><strong>Manual seed</strong>
+For controlled experiments, choose seed indices by inspecting the mesh in ParaView
+and reading the point ids under the cursor.</p></li>
+</ol>
+</section>
+<section id="mapping-to-parameters">
+<h2>Mapping to parameters<a class="headerlink" href="#mapping-to-parameters" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p>Set <code class="docutils literal notranslate"><span class="pre">init_node_id</span></code> to the chosen root node id.</p></li>
+<li><p>If you have a second node id along the initial direction, set <code class="docutils literal notranslate"><span class="pre">second_node_id</span></code>.
+Otherwise, the initial direction is inferred from local surface geometry.</p></li>
+<li><p>Optionally, add fascicle entries to <code class="docutils literal notranslate"><span class="pre">fascicles_angles</span></code> and <code class="docutils literal notranslate"><span class="pre">fascicles_length</span></code> if your
+protocol initializes multiple early branches.</p></li>
+</ul>
+</section>
+<section id="example">
+<h2>Example<a class="headerlink" href="#example" title="Link to this heading">¶</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">purkinje_uv</span><span class="w"> </span><span class="kn">import</span> <span class="n">Parameters</span><span class="p">,</span> <span class="n">Mesh</span><span class="p">,</span> <span class="n">FractalTree</span>
 
-<div id="search-results"></div>
+<span class="n">mesh</span> <span class="o">=</span> <span class="n">Mesh</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s2">&quot;endocardium.vtu&quot;</span><span class="p">)</span>
+<span class="n">mesh</span><span class="o">.</span><span class="n">detect_boundary</span><span class="p">()</span>
+
+<span class="c1"># Example: pick the mesh node closest to a user-provided landmark (x0)</span>
+<span class="n">x0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">10.2</span><span class="p">,</span> <span class="o">-</span><span class="mf">3.7</span><span class="p">,</span> <span class="mf">22.1</span><span class="p">])</span>  <span class="c1"># mm, example landmark in world coordinates</span>
+<span class="n">root_id</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">x0</span><span class="p">)[</span><span class="mi">1</span><span class="p">])</span>  <span class="c1"># nearest vertex id using the KD-tree</span>
+
+<span class="n">p</span> <span class="o">=</span> <span class="n">Parameters</span><span class="p">()</span>
+<span class="n">p</span><span class="o">.</span><span class="n">init_node_id</span> <span class="o">=</span> <span class="n">root_id</span>
+<span class="c1"># Optional: define second node to bias the first direction</span>
+<span class="c1"># p.second_node_id = ...</span>
+
+<span class="n">ft</span> <span class="o">=</span> <span class="n">FractalTree</span><span class="p">(</span><span class="n">mesh</span><span class="o">=</span><span class="n">mesh</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="n">p</span><span class="p">,</span> <span class="n">mesh_uv</span><span class="o">=</span><span class="n">mesh</span><span class="p">)</span>
+<span class="n">ft</span><span class="o">.</span><span class="n">grow_tree</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="validation-checklist">
+<h2>Validation checklist<a class="headerlink" href="#validation-checklist" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p>The root node lies on the intended endocardial chamber.</p></li>
+<li><p>The initial direction points into the chamber (not out of it).</p></li>
+<li><p>After the first few generations, endpoints distribute across the intended regions.</p></li>
+</ul>
+</section>
+</section>
 
         </article>
       </div>
       <footer>
         
         <div class="related-pages">
-          
-          
+          <a class="next-page" href="dev/index.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Developer Notes</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="usage/workflow.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Workflow</div>
+                
+              </div>
+            </a>
         </div>
         <div class="bottom-of-page">
           <div class="left-details">
@@ -294,8 +380,32 @@
         
       </footer>
     </div>
-    <aside class="toc-drawer no-toc">
+    <aside class="toc-drawer">
       
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Anatomical Seeding</a><ul>
+<li><a class="reference internal" href="#goal">Goal</a></li>
+<li><a class="reference internal" href="#interfaces">Interfaces</a></li>
+<li><a class="reference internal" href="#common-strategies">Common strategies</a></li>
+<li><a class="reference internal" href="#mapping-to-parameters">Mapping to parameters</a></li>
+<li><a class="reference internal" href="#example">Example</a></li>
+<li><a class="reference internal" href="#validation-checklist">Validation checklist</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
       
       
     </aside>
@@ -304,16 +414,5 @@
     <script src="_static/doctools.js?v=9bcbadda"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/scripts/furo.js?v=46bd48cc"></script>
-    <script type="module" src="https://cdn.jsdelivr.net/npm/mermaid@11.2.0/dist/mermaid.esm.min.mjs"></script>
-    <script type="module" src="https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0.1.4/dist/mermaid-layout-elk.esm.min.mjs"></script>
-    <script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.2.0/dist/mermaid.esm.min.mjs";import elkLayouts from "https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0.1.4/dist/mermaid-layout-elk.esm.min.mjs";mermaid.registerLayoutLoaders(elkLayouts);mermaid.initialize({startOnLoad:false});</script>
-    <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
-    <script type="module">
-import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.2.0/dist/mermaid.esm.min.mjs";
-window.addEventListener("load", () => mermaid.run());
-</script>
-    
-<script src="_static/searchtools.js"></script>
-<script src="_static/language_data.js"></script>
-<script src="searchindex.js"></script></body>
+    </body>
 </html>

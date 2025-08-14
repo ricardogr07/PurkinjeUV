@@ -1,69 +1,68 @@
-purkinje\_uv package
+purkinje_uv package
 ====================
 
 Submodules
 ----------
 
-purkinje\_uv.branch module
---------------------------
+purkinje_uv.branch module
+-------------------------
 
 .. automodule:: purkinje_uv.branch
    :members:
    :undoc-members:
    :show-inheritance:
+   :noindex:
 
-purkinje\_uv.edge module
-------------------------
+purkinje_uv.edge module
+-----------------------
 
 .. automodule:: purkinje_uv.edge
    :members:
    :undoc-members:
    :show-inheritance:
+   :noindex:
 
-purkinje\_uv.fractal\_tree\_parameters module
----------------------------------------------
+purkinje_uv.fractal_tree_parameters module
+------------------------------------------
 
 .. automodule:: purkinje_uv.fractal_tree_parameters
    :members:
    :undoc-members:
    :show-inheritance:
+   :noindex:
 
-purkinje\_uv.fractal\_tree\_uv module
--------------------------------------
+purkinje_uv.fractal_tree_uv module
+----------------------------------
 
 .. automodule:: purkinje_uv.fractal_tree_uv
    :members:
    :undoc-members:
    :show-inheritance:
+   :noindex:
 
-purkinje\_uv.mesh module
-------------------------
+purkinje_uv.mesh module
+-----------------------
 
 .. automodule:: purkinje_uv.mesh
    :members:
    :undoc-members:
    :show-inheritance:
+   :noindex:
 
-purkinje\_uv.nodes module
--------------------------
+purkinje_uv.nodes module
+------------------------
 
 .. automodule:: purkinje_uv.nodes
    :members:
    :undoc-members:
    :show-inheritance:
+   :noindex:
 
-purkinje\_uv.purkinje\_tree module
-----------------------------------
+purkinje_uv.purkinje_tree module
+--------------------------------
 
 .. automodule:: purkinje_uv.purkinje_tree
    :members:
    :undoc-members:
    :show-inheritance:
-
-Module contents
----------------
-
-.. automodule:: purkinje_uv
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   :noindex:

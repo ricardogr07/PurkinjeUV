@@ -3,10 +3,10 @@
   <head><meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="purkinje_uv package" href="purkinje_uv.html" /><link rel="prev" title="References" href="../references.html" />
+<link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Performance" href="performance.html" /><link rel="prev" title="Developer Notes" href="index.html" />
 
     <!-- Generated with Sphinx 8.1.3 and Furo 2025.07.19 -->
-        <title>purkinje_uv - purkinje-uv 0.2.2 documentation</title>
+        <title>Data Model Invariants - purkinje-uv 0.2.2 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=d111a655" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=25af2a20" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -178,7 +178,7 @@
           <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
         </button>
       </div>
-      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
         <div class="visually-hidden">Toggle table of contents sidebar</div>
         <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
       </label>
@@ -200,7 +200,7 @@
   <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../welcome.html">Welcome</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../dev/architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="architecture.html">Architecture</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../theory/index.html">Theory &amp; Algorithms</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of Theory &amp; Algorithms</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../theory/fundamentals_2d.html">2D Fundamentals</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../theory/projection_surface.html">Projection to the Heart Surface</a></li>
@@ -212,15 +212,15 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../seeding.html">Anatomical Seeding</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../dev/index.html">Developer Notes</a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of Developer Notes</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="../dev/data_model_invariants.html">Data Model Invariants</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../dev/performance.html">Performance</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../dev/reproducibility.html">Reproducibility</a></li>
+<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">Developer Notes</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of Developer Notes</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
+<li class="toctree-l2 current current-page"><a class="current reference internal" href="#">Data Model Invariants</a></li>
+<li class="toctree-l2"><a class="reference internal" href="performance.html">Performance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="reproducibility.html">Reproducibility</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../references.html">References</a></li>
-<li class="toctree-l1 current has-children current-page"><a class="current reference internal" href="#">purkinje_uv</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><div class="visually-hidden">Toggle navigation of purkinje_uv</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="purkinje_uv.html">purkinje_uv package</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api/modules.html">purkinje_uv</a><input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><div class="visually-hidden">Toggle navigation of purkinje_uv</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api/purkinje_uv.html">purkinje_uv package</a></li>
 </ul>
 </li>
 </ul>
@@ -243,7 +243,7 @@
         </a>
         <div class="content-icon-container">
           <div class="view-this-page">
-  <a class="muted-link" href="../_sources/api/modules.rst.txt" title="View this page">
+  <a class="muted-link" href="../_sources/dev/data_model_invariants.rst.txt" title="View this page">
     <svg><use href="#svg-eye"></use></svg>
     <span class="visually-hidden">View this page</span>
   </a>
@@ -257,29 +257,86 @@
               <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
             </button>
           </div>
-          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
             <div class="visually-hidden">Toggle table of contents sidebar</div>
             <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
           </label>
         </div>
         <article role="main" id="furo-main-content">
-          <section id="purkinje-uv">
-<h1>purkinje_uv<a class="headerlink" href="#purkinje-uv" title="Link to this heading">¶</a></h1>
-<div class="toctree-wrapper compound">
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="purkinje_uv.html">purkinje_uv package</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="purkinje_uv.html#submodules">Submodules</a></li>
-<li class="toctree-l2"><a class="reference internal" href="purkinje_uv.html#purkinje-uv-branch-module">purkinje_uv.branch module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="purkinje_uv.html#purkinje-uv-edge-module">purkinje_uv.edge module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="purkinje_uv.html#purkinje-uv-fractal-tree-parameters-module">purkinje_uv.fractal_tree_parameters module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="purkinje_uv.html#purkinje-uv-fractal-tree-uv-module">purkinje_uv.fractal_tree_uv module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="purkinje_uv.html#purkinje-uv-mesh-module">purkinje_uv.mesh module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="purkinje_uv.html#purkinje-uv-nodes-module">purkinje_uv.nodes module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="purkinje_uv.html#purkinje-uv-purkinje-tree-module">purkinje_uv.purkinje_tree module</a></li>
+          <section id="data-model-invariants">
+<h1>Data Model Invariants<a class="headerlink" href="#data-model-invariants" title="Link to this heading">¶</a></h1>
+<section id="why-invariants">
+<h2>Why invariants?<a class="headerlink" href="#why-invariants" title="Link to this heading">¶</a></h2>
+<p>They ensure a valid, simulation-ready Purkinje graph: geometry is on the surface, indices are valid,
+and the connectivity is a tree without self-loops.</p>
+</section>
+<section id="checklist">
+<h2>Checklist<a class="headerlink" href="#checklist" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p><strong>On-surface nodes</strong>: every node lies on the endocardial surface within tolerance.</p></li>
+<li><p><strong>Valid indices</strong>: all connectivity indices are in <code class="docutils literal notranslate"><span class="pre">[0,</span> <span class="pre">len(nodes)-1]</span></code>.</p></li>
+<li><p><strong>No self-edges</strong>: no edge connects a node to itself.</p></li>
+<li><p><strong>No duplicate edges</strong>: undirected edges appear once (or consistently ordered).</p></li>
+<li><p><strong>Acyclic</strong>: the graph is a tree (<code class="docutils literal notranslate"><span class="pre">|E|</span> <span class="pre">=</span> <span class="pre">|V|</span> <span class="pre">-</span> <span class="pre">C</span></code> where C is number of components).</p></li>
+<li><p><strong>Terminals</strong>: all end nodes in <code class="docutils literal notranslate"><span class="pre">end_nodes</span></code> have degree = 1.</p></li>
+<li><p><strong>No isolated nodes</strong>: every node appears in at least one edge (except permissible root cases).</p></li>
+<li><p><strong>Finite geometry</strong>: node coordinates are finite (no NaN/Inf).</p></li>
+<li><p><strong>PMJs</strong> (if present): are a subset of graph nodes.</p></li>
 </ul>
-</li>
-</ul>
+</section>
+<section id="minimal-validator-example">
+<h2>Minimal validator (example)<a class="headerlink" href="#minimal-validator-example" title="Link to this heading">¶</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">validate_tree</span><span class="p">(</span><span class="n">nodes</span><span class="p">,</span> <span class="n">connectivity</span><span class="p">,</span> <span class="n">end_nodes</span><span class="p">):</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">nodes</span><span class="p">)</span>
+    <span class="c1"># Indices</span>
+    <span class="k">for</span> <span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="ow">in</span> <span class="n">connectivity</span><span class="p">:</span>
+        <span class="k">assert</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">u</span> <span class="o">&lt;</span> <span class="n">n</span> <span class="ow">and</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">v</span> <span class="o">&lt;</span> <span class="n">n</span><span class="p">,</span> <span class="s2">&quot;out-of-range index&quot;</span>
+        <span class="k">assert</span> <span class="n">u</span> <span class="o">!=</span> <span class="n">v</span><span class="p">,</span> <span class="s2">&quot;self-edge found&quot;</span>
+    <span class="c1"># Duplicates (undirected)</span>
+    <span class="n">seen</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="k">for</span> <span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="ow">in</span> <span class="n">connectivity</span><span class="p">:</span>
+        <span class="n">e</span> <span class="o">=</span> <span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="k">if</span> <span class="n">u</span> <span class="o">&lt;</span> <span class="n">v</span> <span class="k">else</span> <span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">u</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="n">e</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">seen</span><span class="p">,</span> <span class="s2">&quot;duplicate edge&quot;</span>
+        <span class="n">seen</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+    <span class="c1"># Degrees</span>
+    <span class="n">deg</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">n</span>
+    <span class="k">for</span> <span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="ow">in</span> <span class="n">connectivity</span><span class="p">:</span>
+        <span class="n">deg</span><span class="p">[</span><span class="n">u</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span><span class="p">;</span> <span class="n">deg</span><span class="p">[</span><span class="n">v</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">end_nodes</span><span class="p">:</span>
+        <span class="k">assert</span> <span class="n">deg</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;endpoint degree != 1 at </span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="c1"># Components and acyclicity via union-find</span>
+    <span class="n">parent</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">))</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">find</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+        <span class="k">while</span> <span class="n">x</span> <span class="o">!=</span> <span class="n">parent</span><span class="p">[</span><span class="n">x</span><span class="p">]:</span>
+            <span class="n">parent</span><span class="p">[</span><span class="n">x</span><span class="p">]</span> <span class="o">=</span> <span class="n">parent</span><span class="p">[</span><span class="n">parent</span><span class="p">[</span><span class="n">x</span><span class="p">]]</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">parent</span><span class="p">[</span><span class="n">x</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">x</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">unite</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
+        <span class="n">ra</span><span class="p">,</span> <span class="n">rb</span> <span class="o">=</span> <span class="n">find</span><span class="p">(</span><span class="n">a</span><span class="p">),</span> <span class="n">find</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">ra</span> <span class="o">==</span> <span class="n">rb</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="n">parent</span><span class="p">[</span><span class="n">rb</span><span class="p">]</span> <span class="o">=</span> <span class="n">ra</span><span class="p">;</span> <span class="k">return</span> <span class="kc">True</span>
+    <span class="n">merges</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="ow">in</span> <span class="n">seen</span><span class="p">:</span>
+        <span class="n">merges</span> <span class="o">+=</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">unite</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="k">else</span> <span class="mi">0</span>
+    <span class="n">components</span> <span class="o">=</span> <span class="nb">len</span><span class="p">({</span><span class="n">find</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="k">if</span> <span class="n">deg</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">})</span>
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">seen</span><span class="p">)</span> <span class="o">==</span> <span class="nb">sum</span><span class="p">(</span><span class="n">deg</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">))</span> <span class="o">-</span> <span class="n">components</span><span class="p">,</span> <span class="s2">&quot;not a forest&quot;</span>
+    <span class="c1"># Geometry finite</span>
+    <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">:</span>
+        <span class="k">assert</span> <span class="nb">all</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">c</span><span class="p">))</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">x</span><span class="p">),</span> <span class="s2">&quot;non-finite coordinate&quot;</span>
+</pre></div>
 </div>
+</section>
+<section id="operational-tips">
+<h2>Operational tips<a class="headerlink" href="#operational-tips" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p>Validate after growth and before activation/export.</p></li>
+<li><p>If you reindex or merge nodes, re-validate.</p></li>
+<li><p>Keep tolerances centralized (distance thresholds, collision spacing).</p></li>
+</ul>
+</section>
 </section>
 
         </article>
@@ -287,23 +344,23 @@
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="purkinje_uv.html">
+          <a class="next-page" href="performance.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">purkinje_uv package</div>
+                <div class="title">Performance</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
-          <a class="prev-page" href="../references.html">
+          <a class="prev-page" href="index.html">
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
               <div class="page-info">
                 <div class="context">
                   <span>Previous</span>
                 </div>
                 
-                <div class="title">References</div>
+                <div class="title">Developer Notes</div>
                 
               </div>
             </a>
@@ -325,8 +382,30 @@
         
       </footer>
     </div>
-    <aside class="toc-drawer no-toc">
+    <aside class="toc-drawer">
       
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Data Model Invariants</a><ul>
+<li><a class="reference internal" href="#why-invariants">Why invariants?</a></li>
+<li><a class="reference internal" href="#checklist">Checklist</a></li>
+<li><a class="reference internal" href="#minimal-validator-example">Minimal validator (example)</a></li>
+<li><a class="reference internal" href="#operational-tips">Operational tips</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
       
       
     </aside>
