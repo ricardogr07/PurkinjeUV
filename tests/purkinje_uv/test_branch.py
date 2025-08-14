@@ -253,7 +253,7 @@ def test_branch_direction_math():
     rotated_dir /= np.linalg.norm(rotated_dir)
 
     grad = np.array([0.0, 1.0, 0.0])
-    expected_dir = rotated_dir + grad  # should be [-1, 0, 0]
+    expected_dir = rotated_dir + grad  # should be [0, 0, 0]
     expected_dir /= np.linalg.norm(expected_dir)
 
     # Final direction must match computed one
