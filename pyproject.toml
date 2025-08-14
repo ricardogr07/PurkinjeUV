@@ -27,11 +27,32 @@ docs = [
     "sphinxcontrib-bibtex>=2.6",
 ]
 dev = [
-    "pytest",
-    "pytest-cov",
-    "ruff",
-    "mypy",
-    "pre-commit"
+  "pytest",
+  "pytest-cov",
+  "ruff",
+  "mypy",
+  "pre-commit",
+  "meshio>=5.3",
+]
+
+e2e = [
+  "meshio>=5.3",
+  "pyvista>=0.43",
+  "pyvistaqt>=0.11",
+]
+
+all = [
+  "sphinx>=7",
+  "furo",
+  "sphinxcontrib-mermaid",
+  "pytest",
+  "pytest-cov",
+  "ruff",
+  "mypy",
+  "pre-commit",
+  "meshio>=5.3",
+  "pyvista>=0.43",
+  "pyvistaqt>=0.11",
 ]
 
 [tool.setuptools]
@@ -69,8 +90,12 @@ add-ignore = ["D105", "D107"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
-addopts = "--cov=purkinje_uv --cov=utils --cov-report=term --cov-report=html --cov-fail-under=80 -ra -q"
+addopts = "--cov=purkinje_uv --cov=utils --cov-report=term --cov-report=html --cov-fail-under=90 -ra -q"
 testpaths  = ["tests"]
+markers = [
+  "e2e: end-to-end tests that exercise the full pipeline",
+  "slow: slow tests (run only when explicitly requested)"
+]
 
 [tool.tox]
 envlist                    = ["py310", "py312", "lint"]
@@ -93,4 +118,5 @@ commands      = [
   "ruff check src/ tests/",
   "mypy src/",
   "pydocstyle src/",
+  "pytest tests/"
 ]

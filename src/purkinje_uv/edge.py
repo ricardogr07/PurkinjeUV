@@ -45,6 +45,10 @@ class Edge:
 
         diff: NDArray[Any] = nodes[n2] - nodes[n1]
         norm: float = float(np.linalg.norm(diff))
+        if norm < 1e-12:
+            raise ValueError(
+                f"Edge direction vector has zero magnitude between nodes {n1} and {n2}"
+            )
         self.dir: NDArray[Any] = diff / norm
 
         self.parent = parent
