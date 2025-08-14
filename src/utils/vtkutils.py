@@ -128,9 +128,17 @@ def vtk_extract_boundary_surfaces(
 
     Returns:
         vtk.vtkPolyData: Surface mesh of the extracted boundary.
+
+    Notes:
+    The reshape of the cell array assumes a structured grid layout.
+    Extent values in VTK define the index range: [x0, x1], so the actual
+    number of cells along x is (x1 - x0), not x1.
     """
-    # use Extent and not Dimensions because data are cell-centered
-    nx, ny, nz = vtk_cell.GetExtent()[1::2]
+    # Compute cell counts per axis
+    extent = vtk_cell.GetExtent()
+    nx = extent[1] - extent[0]
+    ny = extent[3] - extent[2]
+    nz = extent[5] - extent[4]
 
     BLOOD_CODE = 104
 
@@ -160,7 +168,10 @@ def vtk_extract_boundary_surfaces(
 
     # now we color the points depending on the side
     surf = dsa.WrapDataObject(geom.GetOutput())
-    pts = np.rint(surf.Points).astype(int)
+    # Shift mesh points from physical coords to index-based voxel space
+    extent = vtk_cell.GetExtent()
+    offset = np.array([extent[0], extent[2], extent[4]])
+    pts = np.rint(surf.Points - offset).astype(int)
 
     neig = [
         [0, 0, 0],

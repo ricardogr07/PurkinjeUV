@@ -21,6 +21,13 @@ dependencies = [
 
 [project.optional-dependencies]
 docs = ["sphinx>=7", "furo", "sphinxcontrib-mermaid"]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "ruff",
+    "mypy",
+    "pre-commit"
+]
 
 [tool.setuptools]
 package-dir = {"" = "src"}
