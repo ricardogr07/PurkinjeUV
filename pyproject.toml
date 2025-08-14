@@ -20,7 +20,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-docs = ["sphinx>=7", "furo", "sphinxcontrib-mermaid"]
+docs = [
+    "sphinx>=8,<9",
+    "furo",
+    "sphinxcontrib-mermaid",
+    "sphinxcontrib-bibtex>=2.6",
+]
 dev = [
     "pytest",
     "pytest-cov",
