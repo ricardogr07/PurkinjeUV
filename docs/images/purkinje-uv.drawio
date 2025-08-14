@@ -1,0 +1,151 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36" version="28.0.7">
+  <diagram name="Page-1" id="1EItNinalF2sXsJ_FZ6U">
+    <mxGraphModel dx="2246" dy="2314" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="c_purk" value="&lt;div style=&quot;font-weight: bold; font-size: 14px;&quot;&gt;PurkinjeTree&lt;/div&gt;&lt;hr&gt;&lt;div style=&quot;text-align:center&quot;&gt;+nodes: Sequence[NDArray]&lt;br&gt;+connectivity: Sequence[Sequence[int]]&lt;br&gt;+end_nodes: Sequence[int]&lt;/div&gt;&lt;hr&gt;&lt;div style=&quot;text-align:center&quot;&gt;+__init__()&lt;br&gt;+activate_fim()&lt;br&gt;+extract_edges()&lt;br&gt;+extract_pmj_counter()&lt;br&gt;+extract_pmj_np_bincount()&lt;br&gt;+extract_pmj_np_unique()&lt;br&gt;+get_pmjs_activation()&lt;br&gt;+save()&lt;br&gt;+save_meshio()&lt;br&gt;+save_pmjs()&lt;/div&gt;" style="shape=rectangle;whiteSpace=wrap;html=1;verticalAlign=top;align=center;rounded=1;strokeWidth=1.5;fontSize=12;shadow=0;labelBackgroundColor=none;" vertex="1" parent="1">
+          <mxGeometry x="710" y="-35" width="380" height="250" as="geometry" />
+        </mxCell>
+        <mxCell id="c_frac" value="&lt;div style=&quot;font-weight: bold; font-size: 14px;&quot;&gt;FractalTree&lt;/div&gt;&lt;hr&gt;&lt;div style=&quot;text-align:center&quot;&gt;+mesh: Mesh&lt;br&gt;+mesh_uv: Mesh&lt;br&gt;+loc: vtk.vtkCellLocator&lt;br&gt;+scaling_nodes: NDArray&lt;br&gt;+params: Parameters&lt;br&gt;+uv_nodes: NDArray&lt;br&gt;+edges: List[Edge]&lt;br&gt;+end_nodes: List[int]&lt;br&gt;+connectivity: List[List[int]]&lt;br&gt;+nodes_xyz: List[NDArray]&lt;/div&gt;&lt;hr&gt;&lt;div style=&quot;text-align:center&quot;&gt;+__init__()&lt;br&gt;+grow_tree()&lt;br&gt;+save()&lt;/div&gt;" style="shape=rectangle;whiteSpace=wrap;html=1;verticalAlign=top;align=center;rounded=1;strokeWidth=1.5;fontSize=12;shadow=0;labelBackgroundColor=none;" vertex="1" parent="1">
+          <mxGeometry x="710" y="265" width="380" height="270" as="geometry" />
+        </mxCell>
+        <mxCell id="c_params" value="&lt;div style=&quot;font-weight: bold; font-size: 14px;&quot;&gt;Parameters&lt;/div&gt;&lt;hr&gt;&lt;div style=&quot;text-align:center&quot;&gt;+meshfile: str&lt;br&gt;+init_node_id: int&lt;br&gt;+second_node_id: int&lt;br&gt;+init_length: float&lt;br&gt;+N_it: int&lt;br&gt;+length: float&lt;br&gt;+branch_angle: float&lt;br&gt;+w: float&lt;br&gt;+l_segment: float&lt;br&gt;+fascicles_angles: List[float]&lt;br&gt;+fascicles_length: List[float]&lt;/div&gt;&lt;hr&gt;&lt;div style=&quot;text-align:center&quot;&gt;+__init__()&lt;/div&gt;" style="shape=rectangle;whiteSpace=wrap;html=1;verticalAlign=top;align=center;rounded=1;strokeWidth=1.5;fontSize=12;shadow=0;labelBackgroundColor=none;" vertex="1" parent="1">
+          <mxGeometry x="190" y="585" width="360" height="260" as="geometry" />
+        </mxCell>
+        <mxCell id="c_branch" value="&lt;div style=&quot;font-weight: bold; font-size: 14px;&quot;&gt;Branch&lt;/div&gt;&lt;hr&gt;&lt;div style=&quot;text-align:center&quot;&gt;+mesh: Mesh&lt;br&gt;+init_node: int&lt;br&gt;+init_dir: NDArray&lt;br&gt;+init_tri: int&lt;br&gt;+length: float&lt;br&gt;+angle: float&lt;br&gt;+w: float&lt;br&gt;+nodes: Nodes&lt;br&gt;+brother_nodes: Sequence[int]&lt;br&gt;+Nsegments: int&lt;/div&gt;&lt;hr&gt;&lt;div style=&quot;text-align:center&quot;&gt;+__init__()&lt;br&gt;+add_node_to_queue()&lt;/div&gt;" style="shape=rectangle;whiteSpace=wrap;html=1;verticalAlign=top;align=center;rounded=1;strokeWidth=1.5;fontSize=12;shadow=0;labelBackgroundColor=none;" vertex="1" parent="1">
+          <mxGeometry x="720" y="585" width="360" height="230" as="geometry" />
+        </mxCell>
+        <mxCell id="c_edge" value="&lt;div style=&quot;font-weight: bold; font-size: 14px;&quot;&gt;Edge&lt;/div&gt;&lt;hr&gt;&lt;div style=&quot;text-align:center&quot;&gt;+n1: int&lt;br&gt;+n2: int&lt;br&gt;+nodes: Sequence[NDArray]&lt;br&gt;+parent: Optional[int]&lt;br&gt;+branch: Optional[int]&lt;/div&gt;&lt;hr&gt;&lt;div style=&quot;text-align:center&quot;&gt;+__init__()&lt;/div&gt;" style="shape=rectangle;whiteSpace=wrap;html=1;verticalAlign=top;align=center;rounded=1;strokeWidth=1.5;fontSize=12;shadow=0;labelBackgroundColor=none;" vertex="1" parent="1">
+          <mxGeometry x="1210" y="585" width="360" height="210" as="geometry" />
+        </mxCell>
+        <mxCell id="c_mesh" value="&lt;div style=&quot;font-weight: bold; font-size: 14px;&quot;&gt;Mesh&lt;/div&gt;&lt;hr&gt;&lt;div style=&quot;text-align:center&quot;&gt;+verts: NDArray&lt;br&gt;+connectivity: NDArray&lt;br&gt;+normals: NDArray&lt;br&gt;+uv: Optional[NDArray]&lt;/div&gt;&lt;hr&gt;&lt;div style=&quot;text-align:center&quot;&gt;+project_new_point()&lt;br&gt;+gradient()&lt;br&gt;+detect_boundary()&lt;br&gt;+compute_uvscaling()&lt;br&gt;+writeVTU()&lt;/div&gt;" style="shape=rectangle;whiteSpace=wrap;html=1;verticalAlign=top;align=center;rounded=1;strokeWidth=1.5;fontSize=12;shadow=0;labelBackgroundColor=none;" vertex="1" parent="1">
+          <mxGeometry x="720" y="895" width="360" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="c_nodes" value="&lt;div style=&quot;font-weight: bold; font-size: 14px;&quot;&gt;Nodes&lt;/div&gt;&lt;hr&gt;&lt;div style=&quot;text-align:center&quot;&gt;+nodes&lt;br&gt;+tree&lt;br&gt;+end_nodes&lt;br&gt;+last_node&lt;/div&gt;&lt;hr&gt;&lt;div style=&quot;text-align:center&quot;&gt;+__init__()&lt;br&gt;+add_nodes()&lt;br&gt;+collision()&lt;br&gt;+gradient()&lt;br&gt;+update_collision_tree()&lt;br&gt;+distance_from_point()&lt;br&gt;+distance_from_node()&lt;/div&gt;" style="shape=rectangle;whiteSpace=wrap;html=1;verticalAlign=top;align=center;rounded=1;strokeWidth=1.5;fontSize=12;shadow=0;labelBackgroundColor=none;" vertex="1" parent="1">
+          <mxGeometry x="1210" y="895" width="360" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="e_purk_frac" style="startArrow=diamond;startFill=1;endArrow=none;html=1;edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;elbow=horizontal;align=center;strokeWidth=5;labelBackgroundColor=none;" edge="1" parent="1" source="c_purk" target="c_frac">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l_purk_frac_s" value="1" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];strokeColor=none;fillColor=none;fontSize=11;labelBackgroundColor=none;rounded=1;" connectable="0" vertex="1" parent="e_purk_frac">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="-18" y="-12" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="l_purk_frac_t" value="1" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];strokeColor=none;fillColor=none;fontSize=11;labelBackgroundColor=none;rounded=1;" connectable="0" vertex="1" parent="e_purk_frac">
+          <mxGeometry x="1" relative="1" as="geometry">
+            <mxPoint x="18" y="-12" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_frac_params" style="startArrow=diamond;startFill=1;endArrow=none;html=1;edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;elbow=horizontal;align=center;strokeWidth=5;labelBackgroundColor=none;" edge="1" parent="1" source="c_frac" target="c_params">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l_frac_params_s" value="1" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];strokeColor=none;fillColor=none;fontSize=11;labelBackgroundColor=none;rounded=1;" connectable="0" vertex="1" parent="e_frac_params">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="-18" y="-12" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="l_frac_params_t" value="1" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];strokeColor=none;fillColor=none;fontSize=11;labelBackgroundColor=none;rounded=1;" connectable="0" vertex="1" parent="e_frac_params">
+          <mxGeometry x="1" relative="1" as="geometry">
+            <mxPoint x="18" y="-12" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_frac_mesh1" style="startArrow=diamond;startFill=1;endArrow=none;html=1;edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;elbow=horizontal;align=center;strokeWidth=5;labelBackgroundColor=none;" edge="1" parent="1" source="c_frac" target="c_mesh">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="600" y="400" />
+              <mxPoint x="600" y="1005" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="l_frac_mesh1_s" value="1" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];strokeColor=none;fillColor=none;fontSize=11;labelBackgroundColor=none;" connectable="0" vertex="1" parent="e_frac_mesh1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="-18" y="-12" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="l_frac_mesh1_t" value="1" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];strokeColor=none;fillColor=none;fontSize=11;labelBackgroundColor=none;" connectable="0" vertex="1" parent="e_frac_mesh1">
+          <mxGeometry x="1" relative="1" as="geometry">
+            <mxPoint x="18" y="-12" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r_frac_mesh1" value="mesh" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];strokeColor=none;fillColor=none;fontSize=11;" connectable="0" vertex="1" parent="e_frac_mesh1">
+          <mxGeometry x="0.5" relative="1" as="geometry">
+            <mxPoint y="14" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_frac_mesh2" style="startArrow=diamond;startFill=1;endArrow=none;html=1;edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;elbow=horizontal;align=center;strokeWidth=5;labelBackgroundColor=none;" edge="1" parent="1" source="c_frac" target="c_mesh">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="660" y="400" />
+              <mxPoint x="660" y="1005" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="l_frac_mesh2_s" value="1" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];strokeColor=none;fillColor=none;fontSize=11;labelBackgroundColor=none;" connectable="0" vertex="1" parent="e_frac_mesh2">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="-18" y="-12" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="l_frac_mesh2_t" value="1" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];strokeColor=none;fillColor=none;fontSize=11;labelBackgroundColor=none;" connectable="0" vertex="1" parent="e_frac_mesh2">
+          <mxGeometry x="1" relative="1" as="geometry">
+            <mxPoint x="18" y="-12" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r_frac_mesh2" value="mesh_uv" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];strokeColor=none;fillColor=none;fontSize=11;" connectable="0" vertex="1" parent="e_frac_mesh2">
+          <mxGeometry x="0.5" relative="1" as="geometry">
+            <mxPoint y="14" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_frac_edge" style="startArrow=diamond;startFill=0;endArrow=none;html=1;edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;elbow=horizontal;align=center;strokeWidth=5;labelBackgroundColor=none;" edge="1" parent="1" source="c_frac" target="c_edge">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1390" y="400" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="l_frac_edge_s" value="1" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];strokeColor=none;fillColor=none;fontSize=11;labelBackgroundColor=none;" connectable="0" vertex="1" parent="e_frac_edge">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="-18" y="-12" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="l_frac_edge_t" value="0..*" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];strokeColor=none;fillColor=none;fontSize=11;labelBackgroundColor=none;" connectable="0" vertex="1" parent="e_frac_edge">
+          <mxGeometry x="1" relative="1" as="geometry">
+            <mxPoint x="18" y="-12" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_branch_mesh" style="endArrow=open;html=1;edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;elbow=horizontal;align=center;strokeWidth=5;labelBackgroundColor=none;" edge="1" parent="1" source="c_branch" target="c_mesh">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l_branch_mesh_s" value="1" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];strokeColor=none;fillColor=none;fontSize=11;labelBackgroundColor=none;" connectable="0" vertex="1" parent="e_branch_mesh">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="-18" y="-12" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="l_branch_mesh_t" value="1" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];strokeColor=none;fillColor=none;fontSize=11;labelBackgroundColor=none;" connectable="0" vertex="1" parent="e_branch_mesh">
+          <mxGeometry x="1" relative="1" as="geometry">
+            <mxPoint x="18" y="-12" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_branch_nodes" style="endArrow=open;html=1;edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;elbow=horizontal;align=center;strokeWidth=5;labelBackgroundColor=none;" edge="1" parent="1" source="c_branch" target="c_nodes">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1130" y="700" />
+              <mxPoint x="1130" y="1015" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="l_branch_nodes_s" value="1" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];strokeColor=none;fillColor=none;fontSize=11;labelBackgroundColor=none;" connectable="0" vertex="1" parent="e_branch_nodes">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="-18" y="-12" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="l_branch_nodes_t" value="1" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];strokeColor=none;fillColor=none;fontSize=11;labelBackgroundColor=none;" connectable="0" vertex="1" parent="e_branch_nodes">
+          <mxGeometry x="1" relative="1" as="geometry">
+            <mxPoint x="18" y="-12" as="offset" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
