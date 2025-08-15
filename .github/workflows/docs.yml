@@ -23,10 +23,16 @@ jobs:
           fetch-depth: 0          # required so SMV sees history
           fetch-tags: true        # fetch tags too
 
-      - name: Ensure tags and main exist locally
+      - name: Ensure tags and local main exist
+        shell: bash
         run: |
+          set -euxo pipefail
           git fetch origin --tags --prune
-          git fetch origin main:refs/heads/main
+          git fetch origin main            # ensure origin/main exists
+          # create a local main branch IF missing (avoid fetching into checked-out branch)
+          if ! git show-ref --verify --quiet refs/heads/main; then
+            git branch main origin/main
+          fi
           git branch -a
           git tag --list
 
@@ -44,15 +50,17 @@ jobs:
       - name: Select versions to build (main + latest N tags)
         env:
           LATEST_N: 2
+        shell: bash
         run: |
-          TAGS=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n ${LATEST_N})
-          if [ -n "$TAGS" ]; then
-            REGEX="^($(echo $TAGS | tr ' ' '|'))$"
+          set -euxo pipefail
+          TAGS=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n ${LATEST_N} || true)
+          if [ -n "${TAGS}" ]; then
+            REGEX="^($(echo ${TAGS} | tr ' ' '|'))$"
           else
             REGEX="^$"
           fi
           echo "SMV_BRANCH_WHITELIST=^(main)$" >> $GITHUB_ENV
-          echo "SMV_TAG_WHITELIST=$REGEX"     >> $GITHUB_ENV
+          echo "SMV_TAG_WHITELIST=${REGEX}"     >> $GITHUB_ENV
 
       - name: Build Multi-Version HTML
         run: |
@@ -92,10 +100,15 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
-      - name: Ensure tags and main exist locally
+      - name: Ensure tags and local main exist
+        shell: bash
         run: |
+          set -euxo pipefail
           git fetch origin --tags --prune
-          git fetch origin main:refs/heads/main
+          git fetch origin main
+          if ! git show-ref --verify --quiet refs/heads/main; then
+            git branch main origin/main
+          fi
           git branch -a
           git tag --list
 
