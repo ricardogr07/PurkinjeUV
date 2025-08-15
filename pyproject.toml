@@ -25,6 +25,7 @@ docs = [
     "furo",
     "sphinxcontrib-mermaid",
     "sphinxcontrib-bibtex>=2.6",
+    "sphinx-multiversion>=0.2.4",
 ]
 dev = [
   "pytest",
@@ -42,9 +43,11 @@ e2e = [
 ]
 
 all = [
-  "sphinx>=7",
+  "sphinx>=8,<9",
   "furo",
   "sphinxcontrib-mermaid",
+  "sphinxcontrib-bibtex>=2.6",
+  "sphinx-multiversion>=0.2.4",
   "pytest",
   "pytest-cov",
   "ruff",
