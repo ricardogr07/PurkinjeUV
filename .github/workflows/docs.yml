@@ -20,7 +20,15 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # required so SMV sees branches & tags
+          fetch-depth: 0          # required so SMV sees history
+          fetch-tags: true        # fetch tags too
+
+      - name: Ensure tags and main exist locally
+        run: |
+          git fetch origin --tags --prune
+          git fetch origin main:refs/heads/main
+          git branch -a
+          git tag --list
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -57,16 +65,16 @@ jobs:
           repo = os.environ.get("GITHUB_REPOSITORY","").split("/")[-1]
           root = pathlib.Path("docs/_build/html")
           vers = sorted([p.name for p in root.iterdir()
-                         if p.is_dir() and re.match(r'^(main|v\\d+\\.\\d+\\.\\d+)$', p.name)],
+                         if p.is_dir() and re.match(r'^(main|v\d+\.\d+\.\d+)$', p.name)],
                         key=lambda v: (0 if v=="main" else 1,
-                                       tuple(map(int, re.findall(r'\\d+', v))) if v.startswith('v') else ()))
+                                       tuple(map(int, re.findall(r'\d+', v))) if v.startswith('v') else ()))
           base = f"/{repo}"
           data = [{"version": v,
                    "name": ("main" if v=="main" else v),
                    "url": f"{base}/{v}/"} for v in vers]
           tags = [d for d in data if d["version"].startswith("v")]
           if tags:
-              tags.sort(key=lambda d: tuple(map(int, re.findall(r'\\d+', d["version"]))), reverse=True)
+              tags.sort(key=lambda d: tuple(map(int, re.findall(r'\d+', d["version"]))), reverse=True)
               tags[0]["preferred"] = True
           (root / "switcher.json").write_text(json.dumps(data, indent=2), encoding="utf-8")
           PY
@@ -82,6 +90,14 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          fetch-tags: true
+
+      - name: Ensure tags and main exist locally
+        run: |
+          git fetch origin --tags --prune
+          git fetch origin main:refs/heads/main
+          git branch -a
+          git tag --list
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -103,16 +119,16 @@ jobs:
           repo = os.environ.get("GITHUB_REPOSITORY","").split("/")[-1]
           root = pathlib.Path("docs/_build/html")
           vers = sorted([p.name for p in root.iterdir()
-                         if p.is_dir() and re.match(r'^(main|v\\d+\\.\\d+\\.\\d+)$', p.name)],
+                         if p.is_dir() and re.match(r'^(main|v\d+\.\d+\.\d+)$', p.name)],
                         key=lambda v: (0 if v=="main" else 1,
-                                       tuple(map(int, re.findall(r'\\d+', v))) if v.startswith('v') else ()))
+                                       tuple(map(int, re.findall(r'\d+', v))) if v.startswith('v') else ()))
           base = f"/{repo}"
           data = [{"version": v,
                    "name": ("main" if v=="main" else v),
                    "url": f"{base}/{v}/"} for v in vers]
           tags = [d for d in data if d["version"].startswith("v")]
           if tags:
-              tags.sort(key=lambda d: tuple(map(int, re.findall(r'\\d+', d["version"]))), reverse=True)
+              tags.sort(key=lambda d: tuple(map(int, re.findall(r'\d+', d["version"]))), reverse=True)
               tags[0]["preferred"] = True
           (root / "switcher.json").write_text(json.dumps(data, indent=2), encoding="utf-8")
           PY
