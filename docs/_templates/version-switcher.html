@@ -1,0 +1,37 @@
+<div class="sidebar-tree">
+  <div class="sidebar-item">
+    <div class="sidebar-item-title">Version</div>
+    <select id="version-select" style="width:100%"></select>
+  </div>
+</div>
+<script>
+(function () {
+  // Find the version segment in the path: main|dev|vX.Y.Z
+  var parts = location.pathname.split('/').filter(Boolean);
+  var verIdx = -1, current = "main";
+  for (var i = 0; i < parts.length; i++) {
+    if (/^(main|dev|v\d+\.\d+\.\d+)$/.test(parts[i])) { verIdx = i; current = parts[i]; break; }
+  }
+  // Base = everything before the version segment (works for local and GitHub Pages)
+  var basePath = verIdx >= 0 ? '/' + parts.slice(0, verIdx).join('/') : '';
+  if (basePath === '') basePath = '/'; // local server root
+
+  function populate(list) {
+    var sel = document.getElementById("version-select");
+    list.forEach(function (v) {
+      var opt = document.createElement("option");
+      opt.value = v.url;
+      opt.textContent = v.name || v.version;
+      if (v.version === current) opt.selected = true;
+      sel.appendChild(opt);
+    });
+    sel.addEventListener("change", function () { location.href = sel.value; });
+  }
+
+  // Try /switcher.json at the site root (works locally and on GH Pages)
+  fetch(basePath + 'switcher.json')
+    .then(function (r) { return r.json(); })
+    .then(populate)
+    .catch(console.error);
+})();
+</script>

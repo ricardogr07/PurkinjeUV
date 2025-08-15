@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    tags:
+      - 'v*.*.*'      # build on semver tags
   pull_request:
     branches:
       - main
@@ -17,6 +19,16 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # required so SMV sees history
+          fetch-tags: true        # fetch tags too
+
+      - name: Ensure tags and main exist locally
+        run: |
+          git fetch origin --tags --prune
+          git fetch origin main:refs/heads/main
+          git branch -a
+          git tag --list
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -28,19 +40,64 @@ jobs:
           python -m pip install --upgrade pip setuptools wheel
           pip install -e ".[docs]"
 
-      - name: Build Documentation
+      # Select refs: main + latest N semver tags (adjust N below)
+      - name: Select versions to build (main + latest N tags)
+        env:
+          LATEST_N: 2
         run: |
-          sphinx-build -b html docs docs/_build/html
+          TAGS=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n ${LATEST_N})
+          if [ -n "$TAGS" ]; then
+            REGEX="^($(echo $TAGS | tr ' ' '|'))$"
+          else
+            REGEX="^$"
+          fi
+          echo "SMV_BRANCH_WHITELIST=^(main)$" >> $GITHUB_ENV
+          echo "SMV_TAG_WHITELIST=$REGEX"     >> $GITHUB_ENV
+
+      - name: Build Multi-Version HTML
+        run: |
+          sphinx-multiversion docs docs/_build/html
+
+      - name: Generate switcher.json
+        run: |
+          python - << 'PY'
+          import json, pathlib, re, os
+          repo = os.environ.get("GITHUB_REPOSITORY","").split("/")[-1]
+          root = pathlib.Path("docs/_build/html")
+          vers = sorted([p.name for p in root.iterdir()
+                         if p.is_dir() and re.match(r'^(main|v\d+\.\d+\.\d+)$', p.name)],
+                        key=lambda v: (0 if v=="main" else 1,
+                                       tuple(map(int, re.findall(r'\d+', v))) if v.startswith('v') else ()))
+          base = f"/{repo}"
+          data = [{"version": v,
+                   "name": ("main" if v=="main" else v),
+                   "url": f"{base}/{v}/"} for v in vers]
+          tags = [d for d in data if d["version"].startswith("v")]
+          if tags:
+              tags.sort(key=lambda d: tuple(map(int, re.findall(r'\d+', d["version"]))), reverse=True)
+              tags[0]["preferred"] = True
+          (root / "switcher.json").write_text(json.dumps(data, indent=2), encoding="utf-8")
+          PY
 
   deploy:
     name: Deploy to GitHub Pages
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
     needs: docs
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Ensure tags and main exist locally
+        run: |
+          git fetch origin --tags --prune
+          git fetch origin main:refs/heads/main
+          git branch -a
+          git tag --list
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -51,9 +108,30 @@ jobs:
         run: |
           pip install -e ".[docs]"
 
-      - name: Build HTML
+      - name: Build Multi-Version HTML
         run: |
-          sphinx-build -b html docs docs/_build/html
+          sphinx-multiversion docs docs/_build/html
+
+      - name: Generate switcher.json
+        run: |
+          python - << 'PY'
+          import json, pathlib, re, os
+          repo = os.environ.get("GITHUB_REPOSITORY","").split("/")[-1]
+          root = pathlib.Path("docs/_build/html")
+          vers = sorted([p.name for p in root.iterdir()
+                         if p.is_dir() and re.match(r'^(main|v\d+\.\d+\.\d+)$', p.name)],
+                        key=lambda v: (0 if v=="main" else 1,
+                                       tuple(map(int, re.findall(r'\d+', v))) if v.startswith('v') else ()))
+          base = f"/{repo}"
+          data = [{"version": v,
+                   "name": ("main" if v=="main" else v),
+                   "url": f"{base}/{v}/"} for v in vers]
+          tags = [d for d in data if d["version"].startswith("v")]
+          if tags:
+              tags.sort(key=lambda d: tuple(map(int, re.findall(r'\d+', d["version"]))), reverse=True)
+              tags[0]["preferred"] = True
+          (root / "switcher.json").write_text(json.dumps(data, indent=2), encoding="utf-8")
+          PY
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
