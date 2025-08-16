@@ -342,11 +342,11 @@ For subsequent segments, use (<a class="reference internal" href="#equation-eq-d
 <section id="parameter-mapping-paper-library">
 <h2>Parameter mapping (paper → library)<a class="headerlink" href="#parameter-mapping-paper-library" title="Link to this heading">¶</a></h2>
 <ul class="simple">
-<li><p><span class="math notranslate nohighlight">\(\ell_b\)</span>  → <code class="docutils literal notranslate"><span class="pre">Parameters.length</span></code> (median branch length).</p></li>
-<li><p><span class="math notranslate nohighlight">\(\alpha_b\)</span> → <code class="docutils literal notranslate"><span class="pre">Parameters.branch_angle</span></code> (branching angle).</p></li>
-<li><p><span class="math notranslate nohighlight">\(w\)</span>       → <code class="docutils literal notranslate"><span class="pre">Parameters.w</span></code> (repulsion weight).</p></li>
+<li><p><span class="math notranslate nohighlight">\(\ell_b\)</span>  → <code class="docutils literal notranslate"><span class="pre">FractalTreeParameters.length</span></code> (median branch length).</p></li>
+<li><p><span class="math notranslate nohighlight">\(\alpha_b\)</span> → <code class="docutils literal notranslate"><span class="pre">FractalTreeParameters.branch_angle</span></code> (branching angle).</p></li>
+<li><p><span class="math notranslate nohighlight">\(w\)</span>       → <code class="docutils literal notranslate"><span class="pre">FractalTreeParameters.w</span></code> (repulsion weight).</p></li>
 <li><p><span class="math notranslate nohighlight">\(N_s\)</span>     → implicit via the <strong>step length</strong>:
-<code class="docutils literal notranslate"><span class="pre">Parameters.l_segment</span></code> controls the step; typically
+<code class="docutils literal notranslate"><span class="pre">FractalTreeParameters.l_segment</span></code> controls the step; typically
 <span class="math notranslate nohighlight">\(N_s \approx \lceil \ell_b / \texttt{l\_segment} \rceil\)</span>.</p></li>
 <li><p>Segment spacing / collisions → <code class="docutils literal notranslate"><span class="pre">Nodes.collision()</span></code>,
 with KD-tree updates via <code class="docutils literal notranslate"><span class="pre">Nodes.update_collision_tree()</span></code>.</p></li>

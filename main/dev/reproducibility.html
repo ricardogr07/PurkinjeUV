@@ -308,9 +308,9 @@
 <span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">42</span><span class="p">)</span>
 <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">42</span><span class="p">)</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">purkinje_uv</span><span class="w"> </span><span class="kn">import</span> <span class="n">Parameters</span><span class="p">,</span> <span class="n">Mesh</span><span class="p">,</span> <span class="n">FractalTree</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">purkinje_uv</span><span class="w"> </span><span class="kn">import</span> <span class="n">FractalTreeParameters</span><span class="p">,</span> <span class="n">Mesh</span><span class="p">,</span> <span class="n">FractalTree</span>
 
-<span class="n">p</span> <span class="o">=</span> <span class="n">Parameters</span><span class="p">()</span>
+<span class="n">p</span> <span class="o">=</span> <span class="n">FractalTreeParameters</span><span class="p">()</span>
 <span class="c1"># p.length, p.branch_angle, p.w, p.l_segment, p.N_it ...</span>
 
 <span class="n">mesh</span> <span class="o">=</span> <span class="n">Mesh</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s2">&quot;endocardium.vtu&quot;</span><span class="p">)</span>
@@ -331,7 +331,7 @@
 </pre></div>
 </div>
 </li>
-<li><p><strong>Config</strong>: save the full <code class="docutils literal notranslate"><span class="pre">Parameters</span></code> object used for generation next to outputs.</p></li>
+<li><p><strong>Config</strong>: save the full <code class="docutils literal notranslate"><span class="pre">FractalTreeParameters</span></code> object used for generation next to outputs.</p></li>
 </ul>
 </section>
 <section id="run-manifest-recommended">
@@ -340,7 +340,7 @@
 <li><p>Project commit SHA / run id</p></li>
 <li><p>Python &amp; package versions</p></li>
 <li><p>Mesh file path &amp; checksum</p></li>
-<li><p>Parameters (JSON dump)</p></li>
+<li><p>FractalTreeParameters (JSON dump)</p></li>
 <li><p>Random seeds</p></li>
 <li><p>Output file paths</p></li>
 </ul>

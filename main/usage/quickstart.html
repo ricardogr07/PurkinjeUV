@@ -302,35 +302,38 @@
 <h1>Quickstart<a class="headerlink" href="#quickstart" title="Link to this heading">¶</a></h1>
 <p>This minimal example shows the end-to-end flow: mesh → growth → Purkinje tree → activation → save.
 Adjust file paths and parameters as needed.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">purkinje_uv</span><span class="w"> </span><span class="kn">import</span> <span class="n">Parameters</span><span class="p">,</span> <span class="n">Mesh</span><span class="p">,</span> <span class="n">FractalTree</span><span class="p">,</span> <span class="n">PurkinjeTree</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">purkinje_uv</span><span class="w"> </span><span class="kn">import</span> <span class="n">FractalTreeParameters</span><span class="p">,</span> <span class="n">FractalTree</span><span class="p">,</span> <span class="n">PurkinjeTree</span>
 
-<span class="c1"># 1) Parameters (paper-aligned knobs)</span>
-<span class="n">p</span> <span class="o">=</span> <span class="n">Parameters</span><span class="p">()</span>
-<span class="c1"># p.length        # median branch length</span>
-<span class="c1"># p.branch_angle  # branching angle (rad)</span>
-<span class="c1"># p.w             # repulsion weight</span>
-<span class="c1"># p.l_segment     # step size (≈ length / N_s)</span>
-<span class="c1"># p.N_it          # generations</span>
+<span class="c1"># 1) Parameters (frozen dataclass). FractalTree will load the mesh from p.meshfile.</span>
+<span class="n">p</span> <span class="o">=</span> <span class="n">FractalTreeParameters</span><span class="p">(</span>
+    <span class="n">meshfile</span><span class="o">=</span><span class="s2">&quot;path/to/endocardium.vtu&quot;</span><span class="p">,</span>  <span class="c1"># required by current FractalTree</span>
+    <span class="n">init_node_id</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">second_node_id</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">init_length</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
+    <span class="n">N_it</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+    <span class="n">length</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
+    <span class="n">branch_angle</span><span class="o">=</span><span class="mf">0.15</span><span class="p">,</span>  <span class="c1"># radians</span>
+    <span class="n">w</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
+    <span class="n">l_segment</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span>
+    <span class="c1"># Optional fascicles</span>
+    <span class="c1"># fascicles_angles=[-0.4, 0.5],</span>
+    <span class="c1"># fascicles_length=[0.2, 0.4],</span>
+<span class="p">)</span>
 
-<span class="c1"># 2) Load/prepare mesh</span>
-<span class="n">mesh</span> <span class="o">=</span> <span class="n">Mesh</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s2">&quot;path/to/endocardium.vtu&quot;</span><span class="p">)</span>  <span class="c1"># or construct from your data</span>
-<span class="n">mesh</span><span class="o">.</span><span class="n">detect_boundary</span><span class="p">()</span>
-<span class="n">mesh</span><span class="o">.</span><span class="n">compute_uvscaling</span><span class="p">()</span>  <span class="c1"># optional if UVs are present</span>
-
-<span class="c1"># 3) Grow fractal tree on the surface</span>
-<span class="n">ft</span> <span class="o">=</span> <span class="n">FractalTree</span><span class="p">(</span><span class="n">mesh</span><span class="o">=</span><span class="n">mesh</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="n">p</span><span class="p">,</span> <span class="n">mesh_uv</span><span class="o">=</span><span class="n">mesh</span><span class="p">)</span>
+<span class="c1"># 2) Grow fractal tree on the surface</span>
+<span class="n">ft</span> <span class="o">=</span> <span class="n">FractalTree</span><span class="p">(</span><span class="n">params</span><span class="o">=</span><span class="n">p</span><span class="p">)</span>  <span class="c1"># internally loads mesh and computes UV scaling</span>
 <span class="n">ft</span><span class="o">.</span><span class="n">grow_tree</span><span class="p">()</span>
 
-<span class="c1"># 4) Wrap into a PurkinjeTree and activate</span>
+<span class="c1"># 3) Wrap into a PurkinjeTree and activate</span>
 <span class="n">purk</span> <span class="o">=</span> <span class="n">PurkinjeTree</span><span class="p">(</span>
     <span class="n">nodes</span><span class="o">=</span><span class="n">ft</span><span class="o">.</span><span class="n">nodes_xyz</span><span class="p">,</span>
     <span class="n">connectivity</span><span class="o">=</span><span class="n">ft</span><span class="o">.</span><span class="n">connectivity</span><span class="p">,</span>
-    <span class="n">end_nodes</span><span class="o">=</span><span class="n">ft</span><span class="o">.</span><span class="n">end_nodes</span>
+    <span class="n">end_nodes</span><span class="o">=</span><span class="n">ft</span><span class="o">.</span><span class="n">end_nodes</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="n">purk</span><span class="o">.</span><span class="n">extract_pmj_np_unique</span><span class="p">()</span>  <span class="c1"># select PMJs (if applicable)</span>
-<span class="n">purk</span><span class="o">.</span><span class="n">activate_fim</span><span class="p">()</span>           <span class="c1"># run activation model</span>
+<span class="n">purk</span><span class="o">.</span><span class="n">activate_fim</span><span class="p">()</span>           <span class="c1"># run activation model (set stimuli as needed)</span>
 
-<span class="c1"># 5) Persist</span>
+<span class="c1"># 4) Persist</span>
 <span class="n">purk</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>         <span class="c1"># native format</span>
 <span class="n">purk</span><span class="o">.</span><span class="n">save_meshio</span><span class="p">()</span>  <span class="c1"># export to mesh-friendly formats</span>
 <span class="n">purk</span><span class="o">.</span><span class="n">save_pmjs</span><span class="p">()</span>    <span class="c1"># save PMJ list if needed</span>
@@ -339,6 +342,7 @@ Adjust file paths and parameters as needed.</p>
 <section id="notes">
 <h2>Notes<a class="headerlink" href="#notes" title="Link to this heading">¶</a></h2>
 <ul class="simple">
+<li><p><cite>FractalTree</cite> loads the mesh from <code class="docutils literal notranslate"><span class="pre">p.meshfile</span></code> and computes UV scaling internally.</p></li>
 <li><p>The generation loop follows <a class="reference internal" href="../theory/fundamentals_2d.html#alg-flow"><span class="std std-numref">Fig. 4</span></a>. Single-step calls are in <a class="reference internal" href="../theory/fundamentals_2d.html#alg-seq"><span class="std std-numref">Fig. 5</span></a>.</p></li>
 <li><p>See <a class="reference internal" href="../theory/projection_surface.html"><span class="doc">Projection to the Heart Surface</span></a> for how 2D growth is projected to the surface.</p></li>
 <li><p>For anatomical seeds, see <a class="reference internal" href="../seeding.html"><span class="doc">Anatomical Seeding</span></a>.</p></li>

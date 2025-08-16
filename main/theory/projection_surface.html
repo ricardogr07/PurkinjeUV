@@ -368,15 +368,15 @@ but long moves can cross cavities on thin walls.</p></li>
 <li><p><strong>Surface adherence</strong>: the dot product between triangle normal and the vector from the
 triangle plane to the new point should be ≈ 0 (within tolerance).</p></li>
 <li><p><strong>Coverage</strong>: compute the maximum distance from endocardial surface samples to the nearest
-network node; trend this metric while tuning parameters.</p></li>
+network node; trend this metric while tuning FractalTreeparameters.</p></li>
 <li><p><strong>Degree sanity</strong>: endpoints must be degree-1 in the generated connectivity.</p></li>
 </ul>
 </section>
 <section id="minimal-example">
 <h2>Minimal example<a class="headerlink" href="#minimal-example" title="Link to this heading">¶</a></h2>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">purkinje_uv</span><span class="w"> </span><span class="kn">import</span> <span class="n">Parameters</span><span class="p">,</span> <span class="n">Mesh</span><span class="p">,</span> <span class="n">FractalTree</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">purkinje_uv</span><span class="w"> </span><span class="kn">import</span> <span class="n">FractalTreeParameters</span><span class="p">,</span> <span class="n">Mesh</span><span class="p">,</span> <span class="n">FractalTree</span>
 
-<span class="n">p</span> <span class="o">=</span> <span class="n">Parameters</span><span class="p">()</span>
+<span class="n">p</span> <span class="o">=</span> <span class="n">FractalTreeParameters</span><span class="p">()</span>
 <span class="n">mesh</span> <span class="o">=</span> <span class="n">Mesh</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s2">&quot;endocardium.vtu&quot;</span><span class="p">)</span>
 <span class="n">mesh</span><span class="o">.</span><span class="n">detect_boundary</span><span class="p">()</span>
 <span class="n">mesh</span><span class="o">.</span><span class="n">compute_uvscaling</span><span class="p">()</span>  <span class="c1"># optional if UVs are present</span>

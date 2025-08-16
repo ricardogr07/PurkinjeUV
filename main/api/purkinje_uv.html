@@ -493,23 +493,38 @@ and branch association.</p>
 </section>
 <section id="purkinje-uv-fractal-tree-parameters-module">
 <h2>purkinje_uv.fractal_tree_parameters module<a class="headerlink" href="#purkinje-uv-fractal-tree-parameters-module" title="Link to this heading">¶</a></h2>
-<p>Module defining the Parameters class for configuring fractal tree generation.</p>
-<p>This module provides the Parameters class, which holds all settings
+<p>Module defining the FractalTreeParameters class for configuring fractal tree generation.</p>
+<p>This module provides the FractalTreeParameters dataclass, which holds all settings
 for generating a fractal tree structure.</p>
 <dl class="py class">
 <dt class="sig sig-object py">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">purkinje_uv.fractal_tree_parameters.</span></span><span class="sig-name descname"><span class="pre">Parameters</span></span></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">purkinje_uv.fractal_tree_parameters.</span></span><span class="sig-name descname"><span class="pre">FractalTreeParameters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">meshfile=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">init_node_id=0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">second_node_id=1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">init_length=0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">N_it=10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">length=0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">branch_angle=0.15</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">w=0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">l_segment=0.01</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fascicles_angles=&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fascicles_length=&lt;factory&gt;</span></span></em><span class="sig-paren">)</span></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Holds settings for generating a fractal tree structure.</p>
 <dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>meshfile</strong> (<em>str</em><em> | </em><em>None</em>)</p></li>
+<li><p><strong>init_node_id</strong> (<em>int</em>)</p></li>
+<li><p><strong>second_node_id</strong> (<em>int</em>)</p></li>
+<li><p><strong>init_length</strong> (<em>float</em>)</p></li>
+<li><p><strong>N_it</strong> (<em>int</em>)</p></li>
+<li><p><strong>length</strong> (<em>float</em>)</p></li>
+<li><p><strong>branch_angle</strong> (<em>float</em>)</p></li>
+<li><p><strong>w</strong> (<em>float</em>)</p></li>
+<li><p><strong>l_segment</strong> (<em>float</em>)</p></li>
+<li><p><strong>fascicles_angles</strong> (<em>List</em><em>[</em><em>float</em><em>]</em>)</p></li>
+<li><p><strong>fascicles_length</strong> (<em>List</em><em>[</em><em>float</em><em>]</em>)</p></li>
+</ul>
+</dd>
 </dl>
 <dl class="py attribute">
 <dt class="sig sig-object py">
 <span class="sig-name descname"><span class="pre">meshfile</span></span></dt>
-<dd><p>Path to the mesh OBJ file.</p>
+<dd><p>Path to the mesh file (e.g., OBJ); if <code class="docutils literal notranslate"><span class="pre">None</span></code>, no mesh is preloaded.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Optional[str]</p>
+<dd class="field-odd"><p>str | None</p>
 </dd>
 </dl>
 </dd></dl>
@@ -616,7 +631,7 @@ for generating a fractal tree structure.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py">
 <span class="sig-name descname"><span class="pre">fascicles_length</span></span></dt>
-<dd><p>Lengths for each fascicle branch; matches <cite>fascicles_angles</cite>.</p>
+<dd><p>Lengths for each fascicle branch; matches <code class="docutils literal notranslate"><span class="pre">fascicles_angles</span></code>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>List[float]</p>
@@ -624,24 +639,144 @@ for generating a fractal tree structure.</p>
 </dl>
 </dd></dl>
 
-<p class="rubric">Notes</p>
-<ul class="simple">
-<li><p><cite>second_node_id</cite> should not be adjacent to <cite>init_node_id</cite> in the mesh to avoid numeric instability.</p></li>
-<li><p>Fascicles represent straight sub-branches inspired by cardiac fascicles.</p></li>
-<li><p>Set parameters to prevent negative branch lengths when randomization is applied.</p></li>
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">N_it</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">branch_angle</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">fascicles_angles</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></em></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">fascicles_length</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></em></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em><span class="sig-paren">)</span></dt>
+<dd><p>Construct parameters from a dictionary.</p>
+<p>Unknown keys are ignored (emits a warning). Validation occurs in <code class="docutils literal notranslate"><span class="pre">__post_init__</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>data</strong> (<em>Mapping</em><em>[</em><em>str</em><em>, </em><em>Any</em><em>]</em>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>FractalTreeParameters</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_json</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s</span></span></em><span class="sig-paren">)</span></dt>
+<dd><p>Construct parameters from a JSON string.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>s</strong> (<em>str</em>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>FractalTreeParameters</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">init_length</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">init_node_id</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">l_segment</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">length</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">meshfile</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">second_node_id</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">to_dict</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span></dt>
+<dd><p>Return a JSON-serializable dictionary of the parameters.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><em>Dict</em>[str, <em>Any</em>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">to_json</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">indent</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em><span class="sig-paren">)</span></dt>
+<dd><p>Serialize parameters to a JSON string.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>indent</strong> (<em>int</em><em> | </em><em>None</em>) – Indentation level for pretty printing. If <code class="docutils literal notranslate"><span class="pre">None</span></code>, the result is compact.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">to_json_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">indent</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em><span class="sig-paren">)</span></dt>
+<dd><p>Write parameters to a JSON file at <code class="docutils literal notranslate"><span class="pre">path</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>str</em>)</p></li>
+<li><p><strong>indent</strong> (<em>int</em><em> | </em><em>None</em>)</p></li>
 </ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">w</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em></dt>
+<dd></dd></dl>
+
 </dd></dl>
 
 </section>
-<section id="purkinje-uv-fractal-tree-uv-module">
-<h2>purkinje_uv.fractal_tree_uv module<a class="headerlink" href="#purkinje-uv-fractal-tree-uv-module" title="Link to this heading">¶</a></h2>
+<section id="purkinje-uv-fractal-tree-module">
+<h2>purkinje_uv.fractal_tree module<a class="headerlink" href="#purkinje-uv-fractal-tree-module" title="Link to this heading">¶</a></h2>
 <p>Module defining the FractalTree class to generate fractal trees within a mesh domain.</p>
 <p>This module implements UV-based fractal tree growth using geometric rules,
 collision detection, and iterative branching to create a tree structure
 embedded in a 3D mesh.</p>
 <dl class="py class">
 <dt class="sig sig-object py">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">purkinje_uv.fractal_tree_uv.</span></span><span class="sig-name descname"><span class="pre">FractalTree</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">params</span></span></em><span class="sig-paren">)</span></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">purkinje_uv.fractal_tree.</span></span><span class="sig-name descname"><span class="pre">FractalTree</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">params</span></span></em><span class="sig-paren">)</span></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Fractal-tree generator on a UV-mapped surface.</p>
 <p>This class reproduces the legacy algorithm exactly (VTK-based point-in-mesh
@@ -649,7 +784,7 @@ checks, UV-scaling step sizes, and queue behavior), keeping helpers local
 so the module is self-contained.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>params</strong> (<em>Parameters</em>)</p>
+<dd class="field-odd"><p><strong>params</strong> (<em>FractalTreeParameters</em>)</p>
 </dd>
 </dl>
 <dl class="py method">
@@ -1618,7 +1753,7 @@ meshio formats.</p>
 <li><a class="reference internal" href="#purkinje-uv-branch-module">purkinje_uv.branch module</a></li>
 <li><a class="reference internal" href="#purkinje-uv-edge-module">purkinje_uv.edge module</a></li>
 <li><a class="reference internal" href="#purkinje-uv-fractal-tree-parameters-module">purkinje_uv.fractal_tree_parameters module</a></li>
-<li><a class="reference internal" href="#purkinje-uv-fractal-tree-uv-module">purkinje_uv.fractal_tree_uv module</a></li>
+<li><a class="reference internal" href="#purkinje-uv-fractal-tree-module">purkinje_uv.fractal_tree module</a></li>
 <li><a class="reference internal" href="#purkinje-uv-mesh-module">purkinje_uv.mesh module</a></li>
 <li><a class="reference internal" href="#purkinje-uv-nodes-module">purkinje_uv.nodes module</a></li>
 <li><a class="reference internal" href="#purkinje-uv-purkinje-tree-module">purkinje_uv.purkinje_tree module</a></li>

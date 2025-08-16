@@ -315,7 +315,7 @@
 <h2>Relationships (at a glance)<a class="headerlink" href="#relationships-at-a-glance" title="Link to this heading">¶</a></h2>
 <ul class="simple">
 <li><p><strong>PurkinjeTree</strong> ◼→ <strong>FractalTree</strong>: composition <cite>1 → 1</cite></p></li>
-<li><p><strong>FractalTree</strong> ◼→ <strong>Parameters</strong>: composition <cite>1 → 1</cite></p></li>
+<li><p><strong>FractalTree</strong> ◼→ <strong>FractalTreeParameters</strong>: composition <cite>1 → 1</cite></p></li>
 <li><p><strong>FractalTree</strong> ◼→ <strong>Mesh</strong> (role: <code class="docutils literal notranslate"><span class="pre">mesh</span></code>): composition <cite>1 → 1</cite></p></li>
 <li><p><strong>FractalTree</strong> ◼→ <strong>Mesh</strong> (role: <code class="docutils literal notranslate"><span class="pre">mesh_uv</span></code>): composition <cite>1 → 1</cite></p></li>
 <li><p><strong>FractalTree</strong> ◇→ <strong>Edge</strong>: aggregation <cite>1 → 0..*</cite></p></li>
@@ -336,8 +336,8 @@
 <section id="object-lifecycle-short">
 <h2>Object lifecycle (short)<a class="headerlink" href="#object-lifecycle-short" title="Link to this heading">¶</a></h2>
 <ol class="arabic simple">
-<li><p>Initialize <code class="docutils literal notranslate"><span class="pre">Parameters</span></code> and load/preprocess <code class="docutils literal notranslate"><span class="pre">Mesh</span></code> (boundary, UV scaling).</p></li>
-<li><p>Create <code class="docutils literal notranslate"><span class="pre">FractalTree(mesh,</span> <span class="pre">params[,</span> <span class="pre">mesh_uv])</span></code> and call <code class="docutils literal notranslate"><span class="pre">grow_tree()</span></code>:
+<li><p>Initialize <code class="docutils literal notranslate"><span class="pre">FractalTreeParameters</span></code> and load <code class="docutils literal notranslate"><span class="pre">Mesh</span></code>.</p></li>
+<li><p>Create <code class="docutils literal notranslate"><span class="pre">FractalTree(params)</span></code> and call <code class="docutils literal notranslate"><span class="pre">grow_tree()</span></code>:
 - internally creates/uses <code class="docutils literal notranslate"><span class="pre">Branch</span></code> objects,
 - accumulates <code class="docutils literal notranslate"><span class="pre">Edge</span></code> entries and 3D <code class="docutils literal notranslate"><span class="pre">nodes_xyz</span></code> + <code class="docutils literal notranslate"><span class="pre">connectivity</span></code>,
 - maintains <code class="docutils literal notranslate"><span class="pre">end_nodes</span></code>.</p></li>
