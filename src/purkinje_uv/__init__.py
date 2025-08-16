@@ -23,8 +23,8 @@ Utilities:
 
 from purkinje_uv.branch import Branch
 from purkinje_uv.edge import Edge
-from purkinje_uv.fractal_tree_uv import FractalTree
-from purkinje_uv.fractal_tree_parameters import Parameters
+from purkinje_uv.fractal_tree import FractalTree
+from purkinje_uv.fractal_tree_parameters import FractalTreeParameters
 from purkinje_uv.mesh import Mesh
 from purkinje_uv.nodes import Nodes
 from purkinje_uv.purkinje_tree import PurkinjeTree
@@ -41,6 +41,7 @@ __all__ = [
     "Branch",
     "Edge",
     "FractalTree",
+    "FractalTreeParameters",
     "Parameters",
     "Mesh",
     "Nodes",

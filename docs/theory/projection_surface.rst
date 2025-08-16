@@ -74,7 +74,7 @@ Quality checks
 - **Surface adherence**: the dot product between triangle normal and the vector from the
   triangle plane to the new point should be ≈ 0 (within tolerance).
 - **Coverage**: compute the maximum distance from endocardial surface samples to the nearest
-  network node; trend this metric while tuning parameters.
+  network node; trend this metric while tuning FractalTreeparameters.
 - **Degree sanity**: endpoints must be degree-1 in the generated connectivity.
 
 Minimal example
@@ -82,9 +82,9 @@ Minimal example
 
 .. code-block:: python
 
-   from purkinje_uv import Parameters, Mesh, FractalTree
+   from purkinje_uv import FractalTreeParameters, Mesh, FractalTree
 
-   p = Parameters()
+   p = FractalTreeParameters()
    mesh = Mesh.from_file("endocardium.vtu")
    mesh.detect_boundary()
    mesh.compute_uvscaling()  # optional if UVs are present

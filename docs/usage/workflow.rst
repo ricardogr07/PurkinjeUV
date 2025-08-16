@@ -4,7 +4,7 @@ Workflow
 End-to-end steps
 ----------------
 
-1. **Parameters** – set growth/spacing/branching knobs (``Parameters``).
+1. **Parameters** – set growth/spacing/branching knobs (``FractalTreeParameters``).
 2. **Mesh prep** – load endocardium, run ``detect_boundary()``, optionally ``compute_uvscaling()``.
 3. **Generate** – instantiate ``FractalTree`` and call ``grow_tree()`` (projection+collision inside).
 4. **Build** – create ``PurkinjeTree`` from nodes/connectivity/end nodes.

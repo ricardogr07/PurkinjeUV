@@ -48,11 +48,11 @@ For subsequent segments, use (:eq:`eq:dir_update`)–(:eq:`eq:pos_update`).
 Parameter mapping (paper → library)
 -----------------------------------
 
-- :math:`\ell_b`  → ``Parameters.length`` (median branch length).
-- :math:`\alpha_b` → ``Parameters.branch_angle`` (branching angle).
-- :math:`w`       → ``Parameters.w`` (repulsion weight).
+- :math:`\ell_b`  → ``FractalTreeParameters.length`` (median branch length).
+- :math:`\alpha_b` → ``FractalTreeParameters.branch_angle`` (branching angle).
+- :math:`w`       → ``FractalTreeParameters.w`` (repulsion weight).
 - :math:`N_s`     → implicit via the **step length**:
-  ``Parameters.l_segment`` controls the step; typically
+  ``FractalTreeParameters.l_segment`` controls the step; typically
   :math:`N_s \approx \lceil \ell_b / \texttt{l\_segment} \rceil`.
 - Segment spacing / collisions → ``Nodes.collision()``,
   with KD-tree updates via ``Nodes.update_collision_tree()``.

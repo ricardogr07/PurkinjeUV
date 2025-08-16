@@ -1,4 +1,4 @@
-from purkinje_uv import FractalTree, Parameters, PurkinjeTree
+from purkinje_uv import FractalTree, FractalTreeParameters, PurkinjeTree
 import re
 from pathlib import Path
 
@@ -39,17 +39,17 @@ def test_end_to_end_ellipsoid(tmp_path):
     # Make runs repeatable where possible
     np.random.seed(1234)
 
-    params = Parameters()
-    # Keep your known-good setup
-    params.init_node_id = 738
-    params.second_node_id = 210
-    params.l_segment = 0.01
-    params.init_length = 0.3
-    params.length = 0.15
-    params.meshfile = str(mesh_path)
-    params.fascicles_length = [20 * params.l_segment, 40 * params.l_segment]
-    params.fascicles_angles = [-0.4, 0.5]
-
+    lseg = 0.01
+    params = FractalTreeParameters(
+        meshfile=str(mesh_path),
+        init_node_id=738,
+        second_node_id=210,
+        l_segment=lseg,
+        init_length=0.3,
+        length=0.15,
+        fascicles_length=[20 * lseg, 40 * lseg],
+        fascicles_angles=[-0.4, 0.5],  # radians
+    )
     # If a random seed knob exists, set it (safe no-op otherwise)
     if hasattr(params, "random_seed"):
         params.random_seed = 1234
