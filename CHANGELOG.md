@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.3.0](https://github.com/ricardogr07/purkinje-uv/compare/v0.2.2...v0.3.0) (2025-08-16)
+
+
+### Features
+
+* add diagram files for Purkinje tree and workflow visualization ([4b073a8](https://github.com/ricardogr07/purkinje-uv/commit/4b073a89eb7bc65646394c4fdfb44482d3d853eb))
+* add GitHub Actions to deploy docs ([7a87213](https://github.com/ricardogr07/purkinje-uv/commit/7a872139bfa50a0845a474e3e691dbae60943e2e))
+* add interactive labeling functionality with PyVista ([e7403e5](https://github.com/ricardogr07/purkinje-uv/commit/e7403e54ab43e39114058b4ced413272831a876d))
+* add multi-version documentation support  ([#52](https://github.com/ricardogr07/purkinje-uv/issues/52)) ([c8f4c4b](https://github.com/ricardogr07/purkinje-uv/commit/c8f4c4b1f6959385c3c81faba874ea774bc7ca5c))
+* add pre commit config with black ruff isort ([#34](https://github.com/ricardogr07/purkinje-uv/issues/34)) ([69b963f](https://github.com/ricardogr07/purkinje-uv/commit/69b963fb2ed5397c37fb3610e4cb33ec1f274c27))
+* enhance documentation structure and content ([#47](https://github.com/ricardogr07/purkinje-uv/issues/47)) ([a56c9ac](https://github.com/ricardogr07/purkinje-uv/commit/a56c9ac04d9dcfb914867241117755542c87783f))
+* enhance GitHub Actions workflow for documentation build and deployment ([7a87213](https://github.com/ricardogr07/purkinje-uv/commit/7a872139bfa50a0845a474e3e691dbae60943e2e))
+
+
+### Bug Fixes
+
+* set up versioned documentation with mike or sphinx multiversion ([#53](https://github.com/ricardogr07/purkinje-uv/issues/53)) ([544b4f6](https://github.com/ricardogr07/purkinje-uv/commit/544b4f62a63301a17f9efeee1e314d5b8d454959))
+
+
+### Documentation
+
+* update README for improved documentation structure and clarity ([#45](https://github.com/ricardogr07/purkinje-uv/issues/45)) ([6a3e588](https://github.com/ricardogr07/purkinje-uv/commit/6a3e588c5fda0c7c855d16c51a1b5dd93b7760b0))
+
 ## [0.2.2](https://github.com/ricardogr07/purkinje-uv/compare/v0.2.1...v0.2.2) (2025-07-24)
 
 
