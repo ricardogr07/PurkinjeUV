@@ -3,5 +3,11 @@
     "version": "main",
     "name": "main",
     "url": "/purkinje-uv/main/"
+  },
+  {
+    "version": "v0.3.0",
+    "name": "v0.3.0",
+    "url": "/purkinje-uv/v0.3.0/",
+    "preferred": true
   }
 ]
