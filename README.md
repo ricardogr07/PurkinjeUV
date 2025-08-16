@@ -3,7 +3,7 @@
 [![PyPI version](https://badge.fury.io/py/purkinje-uv.svg)](https://badge.fury.io/py/purkinje-uv)
 [![Test](https://github.com/ricardogr07/purkinje-uv/actions/workflows/test.yml/badge.svg)](https://github.com/ricardogr07/purkinje-uv/actions/workflows/test.yml)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Docs](https://img.shields.io/badge/docs-online-blue)](https://ricardogr07.github.io/purkinje-uv/)
+[![Docs](https://img.shields.io/badge/docs-online-blue)](https://ricardogr07.github.io/purkinje-uv/main)
 
 PurkinjeUV is a modular Python package for constructing, simulating, and exporting fractal-based Purkinje networks over anatomical or idealized cardiac surface meshes. It offers a flexible architecture for working with geometries via OBJ, VTK, and GMSH, and supports UV mapping, eikonal solvers, and export utilities.
 
@@ -39,28 +39,55 @@ pip install purkinje-uv
 
 The full documentation is available at:
 
-[https://ricardogr07.github.io/purkinje-uv/](https://ricardogr07.github.io/purkinje-uv/)
+[https://ricardogr07.github.io/purkinje-uv/main](https://ricardogr07.github.io/purkinje-uv/main)
 
 ## Getting Started
 
-See [Getting Started Guide](https://ricardogr07.github.io/purkinje-uv/) for full documentation.
+See [Getting Started Guide](https://ricardogr07.github.io/purkinje-uv/main/usage/quickstart.html) for full documentation.
 
 ```python
-from purkinje_uv import Parameters
-from purkinje_uv.example_fractal_tree_3d import Fractal_Tree_3D
+# Generate a fractal tree and save it to VTU (no activation required)
 
-param = Parameters()
-param.meshfile = "data/sphere.obj"
-param.save = True
-param.filename = "output/fractal_tree"
+from pathlib import Path
+import numpy as np
 
-branches, nodes = Fractal_Tree_3D(param)
+from purkinje_uv import FractalTreeParameters, FractalTree, PurkinjeTree
+
+# Parameters: FractalTree reads the mesh from p.meshfile
+p = FractalTreeParameters(
+    meshfile="data/sphere.obj",
+    init_node_id=0,
+    second_node_id=1,
+    l_segment=0.01,   # step size on the surface
+    init_length=0.1,
+    length=0.1,
+    branch_angle=0.15,
+    w=0.1,
+    N_it=10,
+)
+
+# Grow the tree on the surface (UV domain)
+ft = FractalTree(params=p)
+ft.grow_tree()
+
+# Wrap as a PurkinjeTree and save
+out = Path("output")
+out.mkdir(parents=True, exist_ok=True)
+
+purk = PurkinjeTree(
+    nodes=np.asarray(ft.nodes_xyz),
+    connectivity=np.asarray(ft.connectivity),
+    end_nodes=np.asarray(ft.end_nodes),
+)
+
+purk.save(str(out / "fractal_tree.vtu"))
 ```
 
 Visualization:
 
 ```python
 import pyvista as pv
+
 tree = pv.read("output/fractal_tree.vtu")
 tree.plot()
 ```
