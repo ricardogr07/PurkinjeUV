@@ -19,7 +19,7 @@ import meshio
 
 from .mesh import Mesh
 from .edge import Edge
-from .fractal_tree_parameters import Parameters
+from .fractal_tree_parameters import FractalTreeParameters
 
 
 class FractalTree:
@@ -30,7 +30,7 @@ class FractalTree:
     so the module is self-contained.
     """
 
-    def __init__(self, params: Parameters) -> None:
+    def __init__(self, params: FractalTreeParameters) -> None:
         self.params = params
 
         # Load 3D mesh & compute UV + UV-scaling (like legacy)
