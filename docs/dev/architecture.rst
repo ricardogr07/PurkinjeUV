@@ -17,7 +17,7 @@ Relationships (at a glance)
 ---------------------------
 
 - **PurkinjeTree** ◼→ **FractalTree**: composition `1 → 1`
-- **FractalTree** ◼→ **Parameters**: composition `1 → 1`
+- **FractalTree** ◼→ **FractalTreeParameters**: composition `1 → 1`
 - **FractalTree** ◼→ **Mesh** (role: ``mesh``): composition `1 → 1`
 - **FractalTree** ◼→ **Mesh** (role: ``mesh_uv``): composition `1 → 1`
 - **FractalTree** ◇→ **Edge**: aggregation `1 → 0..*`
@@ -37,8 +37,8 @@ Workflow overview
 Object lifecycle (short)
 ------------------------
 
-1. Initialize ``Parameters`` and load/preprocess ``Mesh`` (boundary, UV scaling).
-2. Create ``FractalTree(mesh, params[, mesh_uv])`` and call ``grow_tree()``:
+1. Initialize ``FractalTreeParameters`` and load ``Mesh``.
+2. Create ``FractalTree(params)`` and call ``grow_tree()``:
    - internally creates/uses ``Branch`` objects,
    - accumulates ``Edge`` entries and 3D ``nodes_xyz`` + ``connectivity``,
    - maintains ``end_nodes``.

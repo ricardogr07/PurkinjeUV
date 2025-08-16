@@ -31,10 +31,10 @@ purkinje_uv.fractal_tree_parameters module
    :show-inheritance:
    :noindex:
 
-purkinje_uv.fractal_tree_uv module
+purkinje_uv.fractal_tree module
 ----------------------------------
 
-.. automodule:: purkinje_uv.fractal_tree_uv
+.. automodule:: purkinje_uv.fractal_tree
    :members:
    :undoc-members:
    :show-inheritance:
