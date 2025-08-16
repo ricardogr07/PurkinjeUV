@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from pathlib import Path
 
-from purkinje_uv import FractalTree, Parameters, PurkinjeTree
+from purkinje_uv import FractalTree, FractalTreeParameters, PurkinjeTree
 
 pytestmark = [pytest.mark.e2e, pytest.mark.slow]
 
@@ -26,16 +26,17 @@ def test_end_to_end_activation_saves_vtu(tmp_path=None):
     meshfile = repo_root / "data" / "ellipsoid.obj"
     assert meshfile.exists(), f"Missing meshfile: {meshfile}"
 
-    # Fractal tree parameters (legacy-equivalent)
-    params = Parameters()
-    params.init_node_id = 738
-    params.second_node_id = 210
-    params.l_segment = 0.01
-    params.init_length = 0.3
-    params.length = 0.15
-    params.meshfile = str(meshfile)
-    params.fascicles_length = [20 * params.l_segment, 40 * params.l_segment]
-    params.fascicles_angles = [-0.4, 0.5]  # radians
+    lseg = 0.01
+    params = FractalTreeParameters(
+        meshfile=str(meshfile),
+        init_node_id=738,
+        second_node_id=210,
+        l_segment=lseg,
+        init_length=0.3,
+        length=0.15,
+        fascicles_length=[20 * lseg, 40 * lseg],
+        fascicles_angles=[-0.4, 0.5],  # radians
+    )
 
     # Grow the tree (UV domain)
     tree = FractalTree(params)

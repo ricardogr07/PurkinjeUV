@@ -1,7 +1,7 @@
 from pathlib import Path
 import pytest
 
-from purkinje_uv import FractalTree, Parameters
+from purkinje_uv import FractalTree, FractalTreeParameters
 
 pytestmark = [pytest.mark.e2e, pytest.mark.slow]
 
@@ -20,16 +20,17 @@ def test_generate_ellipsoid_vtu_saves_to_e2e_output():
 
     out_file = out_dir / "ellipsoid_purkinje_NEW.vtu"
 
-    # Parameters (same as your previous snippet)
-    params = Parameters()
-    params.init_node_id = 738
-    params.second_node_id = 210
-    params.l_segment = 0.01
-    params.init_length = 0.3
-    params.length = 0.15
-    params.meshfile = str(meshfile)
-    params.fascicles_length = [20 * params.l_segment, 40 * params.l_segment]
-    params.fascicles_angles = [-0.4, 0.5]  # radians
+    lseg = 0.01
+    params = FractalTreeParameters(
+        meshfile=str(meshfile),
+        init_node_id=738,
+        second_node_id=210,
+        l_segment=lseg,
+        init_length=0.3,
+        length=0.15,
+        fascicles_length=[20 * lseg, 40 * lseg],
+        fascicles_angles=[-0.4, 0.5],  # radians
+    )
 
     # Generate & save
     tree = FractalTree(params)
