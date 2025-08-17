@@ -14,6 +14,12 @@ Welcome to the purkinje-uv documentation!
    references
    api/modules
 
+.. toctree::
+   :maxdepth: 2
+   :caption: Examples
+
+   examples/index
+
 Introduction
 ------------
 
