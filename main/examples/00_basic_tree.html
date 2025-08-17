@@ -1,0 +1,878 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="01 — Ellipsoid" href="01_ellipsoid_demo.html" /><link rel="prev" title="Examples" href="index.html" />
+
+    <!-- Generated with Sphinx 8.1.3 and Furo 2025.07.19 -->
+        <title>00 — Basic Tree - purkinje-uv documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=d111a655" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=25af2a20" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f2f2f2;
+  --color-code-foreground: #1e1e1e;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #2b2b2b;
+  --color-code-foreground: #f8f8f2;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #2b2b2b;
+  --color-code-foreground: #f8f8f2;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../index.html"><div class="brand">purkinje-uv documentation</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
+  
+  <span class="sidebar-brand-text">purkinje-uv documentation</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-tree">
+  <div class="sidebar-item">
+    <div class="sidebar-item-title">Version</div>
+    <select id="version-select" style="width:100%"></select>
+  </div>
+</div>
+<script>
+(function () {
+  // Find the version segment in the path: main|dev|vX.Y.Z
+  var parts = location.pathname.split('/').filter(Boolean);
+  var verIdx = -1, current = "main";
+  for (var i = 0; i < parts.length; i++) {
+    if (/^(main|dev|v\d+\.\d+\.\d+)$/.test(parts[i])) { verIdx = i; current = parts[i]; break; }
+  }
+  // Base = everything before the version segment (works for local and GitHub Pages)
+  var basePath = verIdx >= 0 ? '/' + parts.slice(0, verIdx).join('/') : '';
+  if (basePath === '') basePath = '/'; // local server root
+
+  function populate(list) {
+    var sel = document.getElementById("version-select");
+    list.forEach(function (v) {
+      var opt = document.createElement("option");
+      opt.value = v.url;
+      opt.textContent = v.name || v.version;
+      if (v.version === current) opt.selected = true;
+      sel.appendChild(opt);
+    });
+    sel.addEventListener("change", function () { location.href = sel.value; });
+  }
+
+  // Try /switcher.json at the site root (works locally and on GH Pages)
+  fetch(basePath + 'switcher.json')
+    .then(function (r) { return r.json(); })
+    .then(populate)
+    .catch(console.error);
+})();
+</script><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../welcome.html">Welcome</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev/architecture.html">Architecture</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../theory/index.html">Theory &amp; Algorithms</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of Theory &amp; Algorithms</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../theory/fundamentals_2d.html">2D Fundamentals</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../theory/projection_surface.html">Projection to the Heart Surface</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../usage/index.html">Usage</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of Usage</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../usage/quickstart.html">Quickstart</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../usage/workflow.html">Workflow</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../seeding.html">Anatomical Seeding</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../dev/index.html">Developer Notes</a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of Developer Notes</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../dev/data_model_invariants.html">Data Model Invariants</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../dev/performance.html">Performance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../dev/reproducibility.html">Reproducibility</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../references.html">References</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api/modules.html">purkinje_uv</a><input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><div class="visually-hidden">Toggle navigation of purkinje_uv</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api/purkinje_uv.html">purkinje_uv package</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul class="current">
+<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">Examples</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Examples</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
+<li class="toctree-l2 current current-page"><a class="current reference internal" href="#">00 — Basic Tree</a></li>
+<li class="toctree-l2"><a class="reference internal" href="01_ellipsoid_demo.html">01 — Ellipsoid</a></li>
+<li class="toctree-l2"><a class="reference internal" href="02_crt_demo.html">02 — CRT demo</a></li>
+</ul>
+</li>
+</ul>
+
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="../_sources/examples/00_basic_tree.nblink.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <div style="margin: 0 0 1rem 0;">
+  <a href="https://colab.research.google.com/github/ricardogr07/purkinje-uv/blob/main/examples/00_basic_tree.ipynb" target="_blank" rel="noopener noreferrer">
+    <img alt="Open in Colab" src="https://colab.research.google.com/assets/colab-badge.svg">
+  </a>
+</div><p><img alt="Open In Colab" src="https://colab.research.google.com/assets/colab-badge.svg" /></p>
+<section id="00-—-Basic-Tree">
+<h1>00 — Basic Tree<a class="headerlink" href="#00-—-Basic-Tree" title="Link to this heading">¶</a></h1>
+<section id="Programmatic-Mesh-→-Grow-→-Activate-→-Export">
+<h2>Programmatic Mesh → Grow → Activate → Export<a class="headerlink" href="#Programmatic-Mesh-→-Grow-→-Activate-→-Export" title="Link to this heading">¶</a></h2>
+<p>Minimal, self-contained demo that:</p>
+<ol class="arabic simple">
+<li><p>Generates a small surface mesh programmatically</p></li>
+<li><p>Grows a fractal tree on it</p></li>
+<li><p>Wraps it into a <code class="docutils literal notranslate"><span class="pre">PurkinjeTree</span></code> and runs FIM activation</p></li>
+<li><p>Exports VTK files for visualization.</p></li>
+</ol>
+<p><strong>Why start here?</strong> No external data is required. This notebook is the fastest path to confirm the pipeline works end-to-end on your machine.</p>
+<p><strong>Outputs</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">output/examples/00_basic_tree/basic_tree_AT.vtu</span></code> — unstructured grid with activation time field.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">output/examples/00_basic_tree/basic_tree_meshio.vtu</span></code> — line mesh via <code class="docutils literal notranslate"><span class="pre">meshio</span></code> (compatible with ParaView).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">output/examples/00_basic_tree/basic_tree_pmj.vtp</span></code> — PMJs as a point set.</p></li>
+</ul>
+<p>You can keep runtimes small with <code class="docutils literal notranslate"><span class="pre">EXAMPLES_LITE=1</span></code> (default in this notebook).</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="o">%</span><span class="n">pip</span> <span class="n">install</span> <span class="o">-</span><span class="n">q</span> <span class="o">--</span><span class="n">upgrade</span> <span class="n">pip</span>
+<span class="o">%</span><span class="n">pip</span> <span class="n">install</span> <span class="o">-</span><span class="n">q</span> <span class="n">purkinje</span><span class="o">-</span><span class="n">uv</span>
+<span class="o">%</span><span class="n">pip</span> <span class="n">install</span> <span class="s2">&quot;pyvista[jupyter]&quot;</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Settings,-Reproducibility,-and-Output-Paths">
+<h2>Settings, Reproducibility, and Output Paths<a class="headerlink" href="#Settings,-Reproducibility,-and-Output-Paths" title="Link to this heading">¶</a></h2>
+<p>We use:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">SEED</span></code> for determinism where applicable.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">LITE</span></code> toggle to keep the example small and fast by default.</p></li>
+<li><p>A dedicated <code class="docutils literal notranslate"><span class="pre">OUT_DIR</span></code> under <code class="docutils literal notranslate"><span class="pre">output/examples/00_basic_tree/</span></code> to avoid clutter.</p></li>
+</ul>
+<p>You may override these with environment variables:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">EXAMPLES_SEED=2025</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">EXAMPLES_LITE=0</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">EXAMPLES_SHOW=1</span></code> (optional 3D viewer at the end)</p></li>
+</ul>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pyvista</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pv</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">IPython.display</span><span class="w"> </span><span class="kn">import</span> <span class="n">HTML</span><span class="p">,</span> <span class="n">display</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">purkinje_uv</span><span class="w"> </span><span class="kn">import</span> <span class="n">FractalTreeParameters</span><span class="p">,</span> <span class="n">FractalTree</span><span class="p">,</span> <span class="n">PurkinjeTree</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">SEED</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;EXAMPLES_SEED&quot;</span><span class="p">,</span> <span class="s2">&quot;1234&quot;</span><span class="p">))</span>
+<span class="n">LITE</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;EXAMPLES_LITE&quot;</span><span class="p">,</span> <span class="s2">&quot;1&quot;</span><span class="p">)))</span>
+<span class="n">SHOW</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;EXAMPLES_SHOW&quot;</span><span class="p">,</span> <span class="s2">&quot;1&quot;</span><span class="p">)))</span>  <span class="c1"># optional PyVista preview</span>
+
+<span class="n">OUT_DIR</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;output&quot;</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;examples&quot;</span> <span class="o">/</span> <span class="s2">&quot;00_basic_tree&quot;</span>
+<span class="n">OUT_DIR</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">DATA_DIR</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;data&quot;</span><span class="p">)</span>
+<span class="n">DATA_DIR</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="n">SEED</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;SEED=</span><span class="si">{</span><span class="n">SEED</span><span class="si">}</span><span class="s2">  LITE=</span><span class="si">{</span><span class="n">LITE</span><span class="si">}</span><span class="s2">  SHOW=</span><span class="si">{</span><span class="n">SHOW</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;OUT_DIR:&quot;</span><span class="p">,</span> <span class="n">OUT_DIR</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Create-a-Programmatic-Mesh-(Sphere)">
+<h2>Create a Programmatic Mesh (Sphere)<a class="headerlink" href="#Create-a-Programmatic-Mesh-(Sphere)" title="Link to this heading">¶</a></h2>
+<p>We generate a simple triangulated sphere with PyVista and save it as an OBJ under <code class="docutils literal notranslate"><span class="pre">data/</span></code>. This avoids any external files and ensures the example is portable.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Generate an OPEN ellipsoid-like surface and save as OBJ</span>
+<span class="n">mesh_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;data/basic_open_ellipsoid.obj&quot;</span><span class="p">)</span>
+<span class="n">mesh_path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># 1) Start with a triangulated sphere</span>
+<span class="n">sphere</span> <span class="o">=</span> <span class="n">pv</span><span class="o">.</span><span class="n">Sphere</span><span class="p">(</span><span class="n">radius</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">theta_resolution</span><span class="o">=</span><span class="mi">160</span><span class="p">,</span> <span class="n">phi_resolution</span><span class="o">=</span><span class="mi">160</span><span class="p">)</span><span class="o">.</span><span class="n">triangulate</span><span class="p">()</span>
+
+<span class="c1"># 2) Scale non-uniformly → ellipsoid-like surface</span>
+<span class="n">ellip</span> <span class="o">=</span> <span class="n">sphere</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">deep</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">ellip</span><span class="o">.</span><span class="n">scale</span><span class="p">([</span><span class="mf">1.30</span><span class="p">,</span> <span class="mf">1.00</span><span class="p">,</span> <span class="mf">0.75</span><span class="p">])</span>
+
+<span class="c1"># 3) Clip with a plane to create an OPEN boundary (no capping)</span>
+<span class="n">open_surf</span> <span class="o">=</span> <span class="n">ellip</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">normal</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">origin</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">0.35</span><span class="p">),</span> <span class="n">invert</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">open_surf</span> <span class="o">=</span> <span class="n">open_surf</span><span class="o">.</span><span class="n">clean</span><span class="p">()</span><span class="o">.</span><span class="n">triangulate</span><span class="p">()</span>
+
+<span class="c1"># 4) Verify it&#39;s actually open: boundary edges must be &gt; 0</span>
+<span class="n">edges</span> <span class="o">=</span> <span class="n">open_surf</span><span class="o">.</span><span class="n">extract_feature_edges</span><span class="p">(</span>
+    <span class="n">boundary_edges</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">feature_edges</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">manifold_edges</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">non_manifold_edges</span><span class="o">=</span><span class="kc">True</span>
+<span class="p">)</span>
+<span class="n">n_boundary</span> <span class="o">=</span> <span class="n">edges</span><span class="o">.</span><span class="n">n_cells</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Boundary edges (first try):&quot;</span><span class="p">,</span> <span class="n">n_boundary</span><span class="p">)</span>
+
+<span class="c1"># If somehow still closed, flip the keep-side and try again</span>
+<span class="k">if</span> <span class="n">n_boundary</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+    <span class="n">open_surf</span> <span class="o">=</span> <span class="n">ellip</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">normal</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">origin</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">0.35</span><span class="p">),</span> <span class="n">invert</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">clean</span><span class="p">()</span><span class="o">.</span><span class="n">triangulate</span><span class="p">()</span>
+    <span class="n">edges</span> <span class="o">=</span> <span class="n">open_surf</span><span class="o">.</span><span class="n">extract_feature_edges</span><span class="p">(</span>
+        <span class="n">boundary_edges</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">feature_edges</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">manifold_edges</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">non_manifold_edges</span><span class="o">=</span><span class="kc">True</span>
+    <span class="p">)</span>
+    <span class="n">n_boundary</span> <span class="o">=</span> <span class="n">edges</span><span class="o">.</span><span class="n">n_cells</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Boundary edges (after invert):&quot;</span><span class="p">,</span> <span class="n">n_boundary</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">n_boundary</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;Surface still closed; adjust clip origin (e.g., 0.3–0.6) or invert.&quot;</span>
+
+<span class="c1"># 5) Save OBJ (PyVista will use meshio under the hood if needed)</span>
+<span class="n">open_surf</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">mesh_path</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Saved OPEN surface: </span><span class="si">{</span><span class="n">mesh_path</span><span class="si">}</span><span class="s2"> | points=</span><span class="si">{</span><span class="n">open_surf</span><span class="o">.</span><span class="n">n_points</span><span class="si">}</span><span class="s2"> faces=</span><span class="si">{</span><span class="n">open_surf</span><span class="o">.</span><span class="n">n_cells</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<br/></pre></div>
+</div>
+</div>
+</section>
+<section id="Fractal-Tree-Parameters-(Small-&amp;-CI-friendly)">
+<h2>Fractal Tree Parameters (Small &amp; CI-friendly)<a class="headerlink" href="#Fractal-Tree-Parameters-(Small-&-CI-friendly)" title="Link to this heading">¶</a></h2>
+<p>We start with conservative values that run quickly:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">l_segment=0.01</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">init_length=0.25</span></code>, <code class="docutils literal notranslate"><span class="pre">length=0.12</span></code> (initial and subsequent segment lengths)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">branch_angle=0.15</span> <span class="pre">rad</span></code>, <code class="docutils literal notranslate"><span class="pre">w=0.1</span></code> (branching control)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">init_node_id=0</span></code>, <code class="docutils literal notranslate"><span class="pre">second_node_id=1</span></code> (work well on the generated sphere)</p></li>
+</ul>
+<p>If you disable LITE mode, you can increase size/complexity later.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">lseg</span> <span class="o">=</span> <span class="mf">0.01</span>
+<span class="n">params</span> <span class="o">=</span> <span class="n">FractalTreeParameters</span><span class="p">(</span>
+    <span class="n">meshfile</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">mesh_path</span><span class="p">),</span>
+    <span class="n">l_segment</span><span class="o">=</span><span class="n">lseg</span><span class="p">,</span>
+    <span class="n">init_length</span><span class="o">=</span><span class="mf">0.30</span><span class="p">,</span>
+    <span class="n">length</span><span class="o">=</span><span class="mf">0.16</span><span class="p">,</span>
+    <span class="n">branch_angle</span><span class="o">=</span><span class="mf">0.22</span><span class="p">,</span>     <span class="c1"># wider fan-out</span>
+    <span class="n">w</span><span class="o">=</span><span class="mf">0.08</span><span class="p">,</span>                <span class="c1"># small curvature tweak</span>
+    <span class="n">N_it</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>                <span class="c1"># deeper branching</span>
+    <span class="n">fascicles_angles</span><span class="o">=</span><span class="p">[</span><span class="o">-</span><span class="mf">0.6</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.6</span><span class="p">],</span>      <span class="c1"># radians</span>
+    <span class="n">fascicles_length</span><span class="o">=</span><span class="p">[</span><span class="mi">25</span><span class="o">*</span><span class="n">lseg</span><span class="p">,</span> <span class="mi">35</span><span class="o">*</span><span class="n">lseg</span><span class="p">,</span> <span class="mi">35</span><span class="o">*</span><span class="n">lseg</span><span class="p">,</span> <span class="mi">25</span><span class="o">*</span><span class="n">lseg</span><span class="p">],</span>
+<span class="p">)</span>
+
+<span class="n">params</span><span class="o">.</span><span class="n">to_json_file</span><span class="p">(</span><span class="n">OUT_DIR</span> <span class="o">/</span> <span class="s2">&quot;params.json&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Saved params to&quot;</span><span class="p">,</span> <span class="n">OUT_DIR</span> <span class="o">/</span> <span class="s2">&quot;params.json&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">to_json</span><span class="p">())</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Grow-the-Fractal-Tree">
+<h2>Grow the Fractal Tree<a class="headerlink" href="#Grow-the-Fractal-Tree" title="Link to this heading">¶</a></h2>
+<p>We instantiate <code class="docutils literal notranslate"><span class="pre">FractalTree</span></code> with our parameters and call <code class="docutils literal notranslate"><span class="pre">grow_tree()</span></code>. The class loads the OBJ, performs the internal UV mapping/scaling, and generates:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">nodes_xyz</span></code> (list of 3D points),</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">connectivity</span></code> (list of edges),</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">end_nodes</span></code> (PMJ indices).</p></li>
+</ul>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">ft</span> <span class="o">=</span> <span class="n">FractalTree</span><span class="p">(</span><span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">)</span>
+<span class="n">ft</span><span class="o">.</span><span class="n">grow_tree</span><span class="p">()</span>
+
+<span class="n">n_nodes</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">ft</span><span class="o">.</span><span class="n">nodes_xyz</span><span class="p">)</span>
+<span class="n">n_edges</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">ft</span><span class="o">.</span><span class="n">connectivity</span><span class="p">)</span>
+<span class="n">n_pmj</span>   <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">ft</span><span class="o">.</span><span class="n">end_nodes</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Tree grown.&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Nodes=</span><span class="si">{</span><span class="n">n_nodes</span><span class="si">}</span><span class="s2">  Edges=</span><span class="si">{</span><span class="n">n_edges</span><span class="si">}</span><span class="s2">  PMJs=</span><span class="si">{</span><span class="n">n_pmj</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Wrap-into-PurkinjeTree-and-Run-FIM-Activation">
+<h2>Wrap into <code class="docutils literal notranslate"><span class="pre">PurkinjeTree</span></code> and Run FIM Activation<a class="headerlink" href="#Wrap-into-PurkinjeTree-and-Run-FIM-Activation" title="Link to this heading">¶</a></h2>
+<p>We now build a <code class="docutils literal notranslate"><span class="pre">PurkinjeTree</span></code> and run the Fast Iterative Method (FIM).</p>
+<ul class="simple">
+<li><p>We stimulate node <strong>0</strong> at time <strong>0.0</strong>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">return_only_pmj=False</span></code> returns activation times for all nodes.</p></li>
+</ul>
+<p>You can inspect PMJ activation times via <code class="docutils literal notranslate"><span class="pre">act[P.pmj]</span></code>.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">P</span> <span class="o">=</span> <span class="n">PurkinjeTree</span><span class="p">(</span>
+    <span class="n">nodes</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">ft</span><span class="o">.</span><span class="n">nodes_xyz</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span>
+    <span class="n">connectivity</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">ft</span><span class="o">.</span><span class="n">connectivity</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">),</span>
+    <span class="n">end_nodes</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">ft</span><span class="o">.</span><span class="n">end_nodes</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">),</span>
+<span class="p">)</span>
+
+<span class="n">act</span> <span class="o">=</span> <span class="n">P</span><span class="o">.</span><span class="n">activate_fim</span><span class="p">(</span>
+    <span class="n">x0</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">),</span>
+    <span class="n">x0_vals</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span>
+    <span class="n">return_only_pmj</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">act_min</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">act</span><span class="p">))</span> <span class="k">if</span> <span class="n">act</span><span class="o">.</span><span class="n">size</span> <span class="k">else</span> <span class="nb">float</span><span class="p">(</span><span class="s2">&quot;nan&quot;</span><span class="p">)</span>
+<span class="n">act_max</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">act</span><span class="p">))</span> <span class="k">if</span> <span class="n">act</span><span class="o">.</span><span class="n">size</span> <span class="k">else</span> <span class="nb">float</span><span class="p">(</span><span class="s2">&quot;nan&quot;</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Activation array:&quot;</span><span class="p">,</span> <span class="n">act</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="s2">&quot; min/max:&quot;</span><span class="p">,</span> <span class="n">act_min</span><span class="p">,</span> <span class="n">act_max</span><span class="p">)</span>
+<span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">P</span><span class="p">,</span> <span class="s2">&quot;pmj&quot;</span><span class="p">):</span>
+    <span class="n">pmj_count</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">P</span><span class="p">,</span> <span class="s2">&quot;pmj&quot;</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;PMJ count:&quot;</span><span class="p">,</span> <span class="n">pmj_count</span><span class="p">)</span>
+<br/></pre></div>
+</div>
+</div>
+</section>
+<section id="Export-for-Visualization">
+<h2>Export for Visualization<a class="headerlink" href="#Export-for-Visualization" title="Link to this heading">¶</a></h2>
+<p>We save three files into <code class="docutils literal notranslate"><span class="pre">OUT_DIR</span></code>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">*_AT.vtu</span></code> — Unstructured grid with activation times (native writer).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">*_meshio.vtu</span></code> — Line mesh via <code class="docutils literal notranslate"><span class="pre">meshio</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">*_pmj.vtp</span></code> — PMJs as points.</p></li>
+</ul>
+<p>Open them in ParaView to verify visually.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">at_path</span>    <span class="o">=</span> <span class="n">OUT_DIR</span> <span class="o">/</span> <span class="s2">&quot;basic_tree_AT.vtu&quot;</span>
+<span class="n">meshio_path</span><span class="o">=</span> <span class="n">OUT_DIR</span> <span class="o">/</span> <span class="s2">&quot;basic_tree_meshio.vtu&quot;</span>
+<span class="n">pmj_path</span>   <span class="o">=</span> <span class="n">OUT_DIR</span> <span class="o">/</span> <span class="s2">&quot;basic_tree_pmj.vtu&quot;</span>
+
+<span class="n">P</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">at_path</span><span class="p">))</span>
+<span class="n">P</span><span class="o">.</span><span class="n">save_meshio</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">meshio_path</span><span class="p">))</span>
+<span class="n">P</span><span class="o">.</span><span class="n">save_pmjs</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">pmj_path</span><span class="p">))</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Wrote:&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot; -&quot;</span><span class="p">,</span> <span class="n">at_path</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot; -&quot;</span><span class="p">,</span> <span class="n">meshio_path</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot; -&quot;</span><span class="p">,</span> <span class="n">pmj_path</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Optional:-Quick-3D-Preview-(PyVista)">
+<h2>Optional: Quick 3D Preview (PyVista)<a class="headerlink" href="#Optional:-Quick-3D-Preview-(PyVista)" title="Link to this heading">¶</a></h2>
+<p>If you set <code class="docutils literal notranslate"><span class="pre">EXAMPLES_SHOW=1</span></code>, the cell below displays:</p>
+<ul class="simple">
+<li><p>Tree lines,</p></li>
+<li><p>PMJ points.</p></li>
+</ul>
+<p>This is optional and may require a local 3D backend.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># --- Colab-safe PyVista visualization: OBJ surface + tree + PMJs ---</span>
+
+<span class="c1"># Resolve paths from notebook globals or sensible defaults</span>
+<span class="n">out_dir</span>   <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="nb">globals</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;OUT_DIR&quot;</span><span class="p">,</span> <span class="s2">&quot;output/examples/00_basic_tree&quot;</span><span class="p">))</span>
+<span class="n">at_path</span>   <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="nb">globals</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;at_path&quot;</span><span class="p">,</span> <span class="n">out_dir</span> <span class="o">/</span> <span class="s2">&quot;basic_tree_AT.vtu&quot;</span><span class="p">))</span>
+<span class="n">pmj_path</span>  <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="nb">globals</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;pmj_path&quot;</span><span class="p">,</span> <span class="n">out_dir</span> <span class="o">/</span> <span class="s2">&quot;basic_tree_pmj.vtu&quot;</span><span class="p">))</span>
+
+<span class="c1"># Try to reuse the exact mesh you used to grow the tree</span>
+<span class="n">mesh_path</span> <span class="o">=</span> <span class="nb">globals</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;mesh_path&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+<span class="k">if</span> <span class="n">mesh_path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="c1"># Fallback chain (adjust to your generation cell name)</span>
+    <span class="k">for</span> <span class="n">candidate</span> <span class="ow">in</span> <span class="p">[</span>
+        <span class="s2">&quot;data/basic_open_ellipsoid.obj&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;data/basic_open_surface.obj&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;data/basic_sphere.obj&quot;</span><span class="p">,</span>
+    <span class="p">]:</span>
+        <span class="k">if</span> <span class="n">Path</span><span class="p">(</span><span class="n">candidate</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+            <span class="n">mesh_path</span> <span class="o">=</span> <span class="n">candidate</span>
+            <span class="k">break</span>
+<span class="k">if</span> <span class="n">mesh_path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="s2">&quot;Could not locate the OBJ used for growth. Set `mesh_path` before running.&quot;</span><span class="p">)</span>
+
+<span class="n">mesh_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">mesh_path</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Reading tree VTU:&quot;</span><span class="p">,</span> <span class="n">at_path</span><span class="p">)</span>
+<span class="n">tree_ds</span> <span class="o">=</span> <span class="n">pv</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">at_path</span><span class="p">))</span>
+
+<span class="n">pmj_ds</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="k">if</span> <span class="n">pmj_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">pmj_ds</span> <span class="o">=</span> <span class="n">pv</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">pmj_path</span><span class="p">))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Reading PMJs:&quot;</span><span class="p">,</span> <span class="n">pmj_path</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;PMJ read failed; overlay will be skipped:&quot;</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Reading surface OBJ:&quot;</span><span class="p">,</span> <span class="n">mesh_path</span><span class="p">)</span>
+<span class="n">surface</span> <span class="o">=</span> <span class="n">pv</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">mesh_path</span><span class="p">))</span>  <span class="c1"># expect PolyData</span>
+<span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">surface</span><span class="p">,</span> <span class="n">pv</span><span class="o">.</span><span class="n">PolyData</span><span class="p">):</span>
+    <span class="n">surface</span> <span class="o">=</span> <span class="n">surface</span><span class="o">.</span><span class="n">extract_geometry</span><span class="p">()</span>
+<span class="n">surface</span> <span class="o">=</span> <span class="n">surface</span><span class="o">.</span><span class="n">clean</span><span class="p">()</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="n">surface</span> <span class="o">=</span> <span class="n">surface</span><span class="o">.</span><span class="n">compute_normals</span><span class="p">(</span><span class="n">auto_orient_normals</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">splitting</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+    <span class="k">pass</span>
+
+<span class="c1"># Optional thinning of heavy surfaces (0.0 keeps full detail)</span>
+<span class="n">DECIMATE</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;EXAMPLES_DECIMATE&quot;</span><span class="p">,</span> <span class="s2">&quot;0.0&quot;</span><span class="p">))</span>
+<span class="k">if</span> <span class="n">DECIMATE</span> <span class="o">&gt;</span> <span class="mf">0.0</span> <span class="ow">and</span> <span class="n">surface</span><span class="o">.</span><span class="n">n_cells</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">surface</span> <span class="o">=</span> <span class="n">surface</span><span class="o">.</span><span class="n">decimate_proportion</span><span class="p">(</span><span class="n">DECIMATE</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Decimated surface to ~</span><span class="si">{</span><span class="nb">int</span><span class="p">((</span><span class="mi">1</span><span class="o">-</span><span class="n">DECIMATE</span><span class="p">)</span><span class="o">*</span><span class="mi">100</span><span class="p">)</span><span class="si">}</span><span class="s2">% faces.&quot;</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+        <span class="k">pass</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">pick_scalar</span><span class="p">(</span><span class="n">ds</span><span class="p">:</span> <span class="n">pv</span><span class="o">.</span><span class="n">DataSet</span><span class="p">):</span>
+    <span class="n">preferred</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;Activation&quot;</span><span class="p">,</span> <span class="s2">&quot;AT&quot;</span><span class="p">,</span> <span class="s2">&quot;activation&quot;</span><span class="p">,</span> <span class="s2">&quot;activation_time&quot;</span><span class="p">,</span> <span class="s2">&quot;time_activation&quot;</span><span class="p">]</span>
+    <span class="n">names</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">point_data</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">cell_data</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span>
+    <span class="k">for</span> <span class="n">nm</span> <span class="ow">in</span> <span class="n">preferred</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">nm</span> <span class="ow">in</span> <span class="n">names</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">nm</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">point_data</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">point_data</span><span class="o">.</span><span class="n">keys</span><span class="p">())[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">cell_data</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">cell_data</span><span class="o">.</span><span class="n">keys</span><span class="p">())[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">return</span> <span class="kc">None</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">ensure_polydata</span><span class="p">(</span><span class="n">ds</span><span class="p">:</span> <span class="n">pv</span><span class="o">.</span><span class="n">DataSet</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pv</span><span class="o">.</span><span class="n">PolyData</span><span class="p">:</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">pd</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">extract_geometry</span><span class="p">()</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">pd</span><span class="p">,</span> <span class="n">pv</span><span class="o">.</span><span class="n">PolyData</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">n_cells</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">pd</span><span class="o">.</span><span class="n">n_points</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">pd</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+        <span class="k">pass</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">edges</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">extract_all_edges</span><span class="p">()</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">edges</span><span class="p">,</span> <span class="n">pv</span><span class="o">.</span><span class="n">PolyData</span><span class="p">)</span> <span class="ow">and</span> <span class="n">edges</span><span class="o">.</span><span class="n">n_cells</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">edges</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+        <span class="k">pass</span>
+    <span class="k">return</span> <span class="n">pv</span><span class="o">.</span><span class="n">PolyData</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">points</span><span class="p">)</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">ds</span><span class="p">,</span> <span class="s2">&quot;points&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="n">pv</span><span class="o">.</span><span class="n">PolyData</span><span class="p">()</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">to_tubes</span><span class="p">(</span><span class="n">pd</span><span class="p">:</span> <span class="n">pv</span><span class="o">.</span><span class="n">PolyData</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="mf">0.003</span><span class="p">):</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">pd</span><span class="o">.</span><span class="n">n_cells</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">tube</span><span class="p">(</span><span class="n">radius</span><span class="o">=</span><span class="n">radius</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+        <span class="k">pass</span>
+    <span class="k">return</span> <span class="n">pd</span>
+
+<span class="c1"># Build tree geometry as tubes for better visibility</span>
+<span class="n">tree_geom</span> <span class="o">=</span> <span class="n">ensure_polydata</span><span class="p">(</span><span class="n">tree_ds</span><span class="p">)</span>
+<span class="n">tree_tubes</span> <span class="o">=</span> <span class="n">to_tubes</span><span class="p">(</span><span class="n">tree_geom</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="mf">0.003</span><span class="p">)</span>
+<span class="n">tree_scalar</span> <span class="o">=</span> <span class="n">pick_scalar</span><span class="p">(</span><span class="n">tree_ds</span><span class="p">)</span>
+
+<span class="c1"># Extract PMJ points if present</span>
+<span class="n">pmj_geom</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="k">if</span> <span class="n">pmj_ds</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">pmj_geom</span> <span class="o">=</span> <span class="n">ensure_polydata</span><span class="p">(</span><span class="n">pmj_ds</span><span class="p">)</span> <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">pmj_ds</span><span class="p">,</span> <span class="s2">&quot;n_points&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="kc">None</span>
+
+<span class="c1"># Also show the boundary edge loop of the OBJ (helps confirm it&#39;s OPEN)</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="n">boundary_edges</span> <span class="o">=</span> <span class="n">surface</span><span class="o">.</span><span class="n">extract_feature_edges</span><span class="p">(</span>
+        <span class="n">boundary_edges</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">feature_edges</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">manifold_edges</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">non_manifold_edges</span><span class="o">=</span><span class="kc">True</span>
+    <span class="p">)</span>
+    <span class="n">has_boundary</span> <span class="o">=</span> <span class="n">boundary_edges</span><span class="o">.</span><span class="n">n_cells</span> <span class="o">&gt;</span> <span class="mi">0</span>
+<span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+    <span class="n">has_boundary</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">boundary_edges</span> <span class="o">=</span> <span class="kc">None</span>
+
+<span class="c1"># Try inline HTML backend first</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="n">pv</span><span class="o">.</span><span class="n">global_theme</span><span class="o">.</span><span class="n">jupyter_backend</span> <span class="o">=</span> <span class="s2">&quot;html&quot;</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Using PyVista backend:&quot;</span><span class="p">,</span> <span class="n">pv</span><span class="o">.</span><span class="n">global_theme</span><span class="o">.</span><span class="n">jupyter_backend</span><span class="p">)</span>
+
+    <span class="n">p</span> <span class="o">=</span> <span class="n">pv</span><span class="o">.</span><span class="n">Plotter</span><span class="p">(</span><span class="n">notebook</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="c1"># Surface first (slight opacity so tubes are visible)</span>
+    <span class="n">p</span><span class="o">.</span><span class="n">add_mesh</span><span class="p">(</span><span class="n">surface</span><span class="p">,</span> <span class="n">opacity</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">smooth_shading</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">has_boundary</span><span class="p">:</span>
+        <span class="n">p</span><span class="o">.</span><span class="n">add_mesh</span><span class="p">(</span><span class="n">boundary_edges</span><span class="p">,</span> <span class="n">line_width</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+    <span class="c1"># Tree tubes with scalar if present</span>
+    <span class="n">p</span><span class="o">.</span><span class="n">add_mesh</span><span class="p">(</span>
+        <span class="n">tree_tubes</span><span class="p">,</span>
+        <span class="n">scalars</span><span class="o">=</span><span class="n">tree_scalar</span> <span class="k">if</span> <span class="n">tree_scalar</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">show_scalar_bar</span><span class="o">=</span><span class="nb">bool</span><span class="p">(</span><span class="n">tree_scalar</span><span class="p">),</span>
+        <span class="n">scalar_bar_args</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="n">tree_scalar</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">},</span>
+    <span class="p">)</span>
+
+    <span class="c1"># PMJs overlay as points</span>
+    <span class="k">if</span> <span class="n">pmj_geom</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">pmj_geom</span><span class="o">.</span><span class="n">n_points</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">p</span><span class="o">.</span><span class="n">add_mesh</span><span class="p">(</span><span class="n">pmj_geom</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="s2">&quot;points&quot;</span><span class="p">,</span> <span class="n">point_size</span><span class="o">=</span><span class="mi">12</span><span class="p">)</span>
+
+    <span class="n">p</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s2">&quot;OBJ Surface + Purkinje Tree + PMJs&quot;</span><span class="p">)</span>
+<span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e_html_backend</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Inline HTML backend render failed:&quot;</span><span class="p">,</span> <span class="n">e_html_backend</span><span class="p">)</span>
+
+    <span class="c1"># Fallback 1: standalone HTML export and embed</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">html_path</span> <span class="o">=</span> <span class="n">out_dir</span> <span class="o">/</span> <span class="s2">&quot;basic_tree_with_surface.html&quot;</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">pv</span><span class="o">.</span><span class="n">start_xvfb</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="k">pass</span>
+
+        <span class="n">p</span> <span class="o">=</span> <span class="n">pv</span><span class="o">.</span><span class="n">Plotter</span><span class="p">(</span><span class="n">off_screen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">p</span><span class="o">.</span><span class="n">add_mesh</span><span class="p">(</span><span class="n">surface</span><span class="p">,</span> <span class="n">opacity</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">smooth_shading</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">has_boundary</span><span class="p">:</span>
+            <span class="n">p</span><span class="o">.</span><span class="n">add_mesh</span><span class="p">(</span><span class="n">boundary_edges</span><span class="p">,</span> <span class="n">line_width</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">p</span><span class="o">.</span><span class="n">add_mesh</span><span class="p">(</span>
+            <span class="n">tree_tubes</span><span class="p">,</span>
+            <span class="n">scalars</span><span class="o">=</span><span class="n">tree_scalar</span> <span class="k">if</span> <span class="n">tree_scalar</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">show_scalar_bar</span><span class="o">=</span><span class="nb">bool</span><span class="p">(</span><span class="n">tree_scalar</span><span class="p">),</span>
+            <span class="n">scalar_bar_args</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="n">tree_scalar</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">},</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">pmj_geom</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">pmj_geom</span><span class="o">.</span><span class="n">n_points</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">p</span><span class="o">.</span><span class="n">add_mesh</span><span class="p">(</span><span class="n">pmj_geom</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="s2">&quot;points&quot;</span><span class="p">,</span> <span class="n">point_size</span><span class="o">=</span><span class="mi">12</span><span class="p">)</span>
+
+        <span class="n">p</span><span class="o">.</span><span class="n">export_html</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">html_path</span><span class="p">))</span>
+        <span class="n">display</span><span class="p">(</span><span class="n">HTML</span><span class="p">(</span><span class="n">html_path</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Embedded exported HTML:&quot;</span><span class="p">,</span> <span class="n">html_path</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e_export</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;HTML export/embed failed:&quot;</span><span class="p">,</span> <span class="n">e_export</span><span class="p">)</span>
+
+        <span class="c1"># Fallback 2: screenshot</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">img_path</span> <span class="o">=</span> <span class="n">out_dir</span> <span class="o">/</span> <span class="s2">&quot;basic_tree_with_surface.png&quot;</span>
+            <span class="n">p</span> <span class="o">=</span> <span class="n">pv</span><span class="o">.</span><span class="n">Plotter</span><span class="p">(</span><span class="n">off_screen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">p</span><span class="o">.</span><span class="n">add_mesh</span><span class="p">(</span><span class="n">surface</span><span class="p">,</span> <span class="n">opacity</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">smooth_shading</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">has_boundary</span><span class="p">:</span>
+                <span class="n">p</span><span class="o">.</span><span class="n">add_mesh</span><span class="p">(</span><span class="n">boundary_edges</span><span class="p">,</span> <span class="n">line_width</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+            <span class="n">p</span><span class="o">.</span><span class="n">add_mesh</span><span class="p">(</span>
+                <span class="n">tree_tubes</span><span class="p">,</span>
+                <span class="n">scalars</span><span class="o">=</span><span class="n">tree_scalar</span> <span class="k">if</span> <span class="n">tree_scalar</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+                <span class="n">show_scalar_bar</span><span class="o">=</span><span class="nb">bool</span><span class="p">(</span><span class="n">tree_scalar</span><span class="p">),</span>
+                <span class="n">scalar_bar_args</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="n">tree_scalar</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">},</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">pmj_geom</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">pmj_geom</span><span class="o">.</span><span class="n">n_points</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">p</span><span class="o">.</span><span class="n">add_mesh</span><span class="p">(</span><span class="n">pmj_geom</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="s2">&quot;points&quot;</span><span class="p">,</span> <span class="n">point_size</span><span class="o">=</span><span class="mi">12</span><span class="p">)</span>
+            <span class="n">p</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">screenshot</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">img_path</span><span class="p">))</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">IPython.display</span><span class="w"> </span><span class="kn">import</span> <span class="n">Image</span>
+            <span class="n">display</span><span class="p">(</span><span class="n">Image</span><span class="p">(</span><span class="n">filename</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">img_path</span><span class="p">)))</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Screenshot fallback saved:&quot;</span><span class="p">,</span> <span class="n">img_path</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e_ss</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Screenshot fallback failed:&quot;</span><span class="p">,</span> <span class="n">e_ss</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Verification-Checklist">
+<h2>Verification Checklist<a class="headerlink" href="#Verification-Checklist" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p>This notebook produced three files in <code class="docutils literal notranslate"><span class="pre">output/examples/00_basic_tree/</span></code>.</p></li>
+<li><p>Activation array has the same length as the number of tree nodes.</p></li>
+<li><p>PMJ file exists and contains points.</p></li>
+</ul>
+<p><strong>Reproducibility tips</strong></p>
+<ul class="simple">
+<li><p>Keep <code class="docutils literal notranslate"><span class="pre">SEED</span></code> fixed to stabilize stochastic parts.</p></li>
+<li><p>Use <code class="docutils literal notranslate"><span class="pre">EXAMPLES_LITE=1</span></code> for CI or quick runs; set <code class="docutils literal notranslate"><span class="pre">EXAMPLES_LITE=0</span></code> to explore larger trees.</p></li>
+</ul>
+</section>
+<section id="Troubleshooting">
+<h2>Troubleshooting<a class="headerlink" href="#Troubleshooting" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p><strong>``vtk`` wheel installation errors (Windows/Linux):</strong> ensure you’re using a supported Python version and recent pip (<code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">-m</span> <span class="pre">pip</span> <span class="pre">install</span> <span class="pre">--upgrade</span> <span class="pre">pip</span></code>).</p></li>
+<li><p><strong>OBJ writer not available:</strong> the notebook falls back to <code class="docutils literal notranslate"><span class="pre">meshio</span></code> to write OBJ or VTU. Ensure <code class="docutils literal notranslate"><span class="pre">meshio</span></code> is installed (the first cell does this).</p></li>
+<li><p><strong>Blank preview window:</strong> set <code class="docutils literal notranslate"><span class="pre">EXAMPLES_SHOW=1</span></code> to enable the viewer and ensure your environment supports interactive windows (e.g., not running headless).</p></li>
+</ul>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="01_ellipsoid_demo.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">01 — Ellipsoid</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="index.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Examples</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2025, Ricardo García Ramírez
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">00 — Basic Tree</a><ul>
+<li><a class="reference internal" href="#Programmatic-Mesh-→-Grow-→-Activate-→-Export">Programmatic Mesh → Grow → Activate → Export</a></li>
+<li><a class="reference internal" href="#Settings,-Reproducibility,-and-Output-Paths">Settings, Reproducibility, and Output Paths</a></li>
+<li><a class="reference internal" href="#Create-a-Programmatic-Mesh-(Sphere)">Create a Programmatic Mesh (Sphere)</a></li>
+<li><a class="reference internal" href="#Fractal-Tree-Parameters-(Small-&amp;-CI-friendly)">Fractal Tree Parameters (Small &amp; CI-friendly)</a></li>
+<li><a class="reference internal" href="#Grow-the-Fractal-Tree">Grow the Fractal Tree</a></li>
+<li><a class="reference internal" href="#Wrap-into-PurkinjeTree-and-Run-FIM-Activation">Wrap into <code class="docutils literal notranslate"><span class="pre">PurkinjeTree</span></code> and Run FIM Activation</a></li>
+<li><a class="reference internal" href="#Export-for-Visualization">Export for Visualization</a></li>
+<li><a class="reference internal" href="#Optional:-Quick-3D-Preview-(PyVista)">Optional: Quick 3D Preview (PyVista)</a></li>
+<li><a class="reference internal" href="#Verification-Checklist">Verification Checklist</a></li>
+<li><a class="reference internal" href="#Troubleshooting">Troubleshooting</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script src="../_static/documentation_options.js?v=e259d695"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=ccdb6887"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    </body>
+</html>

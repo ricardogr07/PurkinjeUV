@@ -1,0 +1,1037 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="prev" title="01 — Ellipsoid" href="01_ellipsoid_demo.html" />
+
+    <!-- Generated with Sphinx 8.1.3 and Furo 2025.07.19 -->
+        <title>02 — CRT demo - purkinje-uv documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=d111a655" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=25af2a20" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f2f2f2;
+  --color-code-foreground: #1e1e1e;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #2b2b2b;
+  --color-code-foreground: #f8f8f2;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #2b2b2b;
+  --color-code-foreground: #f8f8f2;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../index.html"><div class="brand">purkinje-uv documentation</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
+  
+  <span class="sidebar-brand-text">purkinje-uv documentation</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-tree">
+  <div class="sidebar-item">
+    <div class="sidebar-item-title">Version</div>
+    <select id="version-select" style="width:100%"></select>
+  </div>
+</div>
+<script>
+(function () {
+  // Find the version segment in the path: main|dev|vX.Y.Z
+  var parts = location.pathname.split('/').filter(Boolean);
+  var verIdx = -1, current = "main";
+  for (var i = 0; i < parts.length; i++) {
+    if (/^(main|dev|v\d+\.\d+\.\d+)$/.test(parts[i])) { verIdx = i; current = parts[i]; break; }
+  }
+  // Base = everything before the version segment (works for local and GitHub Pages)
+  var basePath = verIdx >= 0 ? '/' + parts.slice(0, verIdx).join('/') : '';
+  if (basePath === '') basePath = '/'; // local server root
+
+  function populate(list) {
+    var sel = document.getElementById("version-select");
+    list.forEach(function (v) {
+      var opt = document.createElement("option");
+      opt.value = v.url;
+      opt.textContent = v.name || v.version;
+      if (v.version === current) opt.selected = true;
+      sel.appendChild(opt);
+    });
+    sel.addEventListener("change", function () { location.href = sel.value; });
+  }
+
+  // Try /switcher.json at the site root (works locally and on GH Pages)
+  fetch(basePath + 'switcher.json')
+    .then(function (r) { return r.json(); })
+    .then(populate)
+    .catch(console.error);
+})();
+</script><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../welcome.html">Welcome</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev/architecture.html">Architecture</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../theory/index.html">Theory &amp; Algorithms</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of Theory &amp; Algorithms</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../theory/fundamentals_2d.html">2D Fundamentals</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../theory/projection_surface.html">Projection to the Heart Surface</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../usage/index.html">Usage</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of Usage</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../usage/quickstart.html">Quickstart</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../usage/workflow.html">Workflow</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../seeding.html">Anatomical Seeding</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../dev/index.html">Developer Notes</a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of Developer Notes</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../dev/data_model_invariants.html">Data Model Invariants</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../dev/performance.html">Performance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../dev/reproducibility.html">Reproducibility</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../references.html">References</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api/modules.html">purkinje_uv</a><input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><div class="visually-hidden">Toggle navigation of purkinje_uv</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api/purkinje_uv.html">purkinje_uv package</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul class="current">
+<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">Examples</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Examples</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="00_basic_tree.html">00 — Basic Tree</a></li>
+<li class="toctree-l2"><a class="reference internal" href="01_ellipsoid_demo.html">01 — Ellipsoid</a></li>
+<li class="toctree-l2 current current-page"><a class="current reference internal" href="#">02 — CRT demo</a></li>
+</ul>
+</li>
+</ul>
+
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="../_sources/examples/02_crt_demo.nblink.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <div style="margin: 0 0 1rem 0;">
+  <a href="https://colab.research.google.com/github/ricardogr07/purkinje-uv/blob/main/examples/02_crt_demo.ipynb" target="_blank" rel="noopener noreferrer">
+    <img alt="Open in Colab" src="https://colab.research.google.com/assets/colab-badge.svg">
+  </a>
+</div><p><img alt="Open In Colab" src="https://colab.research.google.com/assets/colab-badge.svg" /></p>
+<section id="02-—-CRT-demo">
+<h1>02 — CRT demo<a class="headerlink" href="#02-—-CRT-demo" title="Link to this heading">¶</a></h1>
+<section id="LV/RV-trees,-activation,-and-BiV-scenarios">
+<h2>LV/RV trees, activation, and BiV scenarios<a class="headerlink" href="#LV/RV-trees,-activation,-and-BiV-scenarios" title="Link to this heading">¶</a></h2>
+<p>This demo builds <strong>LV</strong> and <strong>RV</strong> Purkinje trees on the provided endocardial surfaces, runs a fast activation solver, and visualizes activation on the chambers for several scenarios:</p>
+<ul class="simple">
+<li><p><strong>baseline</strong>: LV and RV start together</p></li>
+<li><p><strong>rv_only</strong>: only RV is paced (LV is unreached → masked)</p></li>
+<li><p><strong>biv</strong>: BiV with a user‐controlled VV delay (<code class="docutils literal notranslate"><span class="pre">VV_DELAY_MS</span></code>)</p></li>
+<li><p><strong>biv_paper</strong>: BiV with the paper’s LV-early preset (−75 ms)</p></li>
+</ul>
+<p>We use the <strong>paper ground-truth</strong> seed indices and parameters to reproduce the reference trees.</p>
+</section>
+<section id="Environment-&amp;-dependencies">
+<h2>Environment &amp; dependencies<a class="headerlink" href="#Environment-&-dependencies" title="Link to this heading">¶</a></h2>
+<p>This notebook is designed to run in an isolated environment (e.g., Colab).</p>
+<ul class="simple">
+<li><p>Installs: <code class="docutils literal notranslate"><span class="pre">purkinje-uv</span></code> and <code class="docutils literal notranslate"><span class="pre">plotly</span></code></p></li>
+<li><p>No GPU is required.</p></li>
+<li><p>Output is written under <code class="docutils literal notranslate"><span class="pre">output/examples/02_crt_demo/</span></code>.</p></li>
+</ul>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>%pip install -q --upgrade pip purkinje-uv plotly
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>from pathlib import Path
+import os
+import json
+import numpy as np
+
+from purkinje_uv import FractalTreeParameters, FractalTree, PurkinjeTree
+import pyvista as pv
+import plotly.graph_objects as go
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Reproducibility-knobs-&amp;-paths">
+<h2>Reproducibility knobs &amp; paths<a class="headerlink" href="#Reproducibility-knobs-&-paths" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">SEED</span></code> controls NumPy’s RNG (tree growth is deterministic given parameters; this is for ancillary steps).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">LITE=1</span></code> uses quicker defaults when we generate parameters automatically (we keep the paper preset here).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">VV_DELAY_MS</span></code> controls the <strong>biv</strong> scenario: LV is delayed by this many ms relative to RV.</p></li>
+</ul>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span># Repro + knobs
+SEED = int(os.getenv(&quot;EXAMPLES_SEED&quot;, &quot;1234&quot;))
+LITE = bool(int(os.getenv(&quot;EXAMPLES_LITE&quot;, &quot;1&quot;)))          # fast by default
+VV_DELAY_MS = int(os.getenv(&quot;CRT_VV_DELAY_MS&quot;, &quot;0&quot;))       # BiV LV delay vs RV (ms); try -40, 0, +40 later
+
+# Locations
+DATA_DIR = Path(&quot;data&quot;) / &quot;crtdemo&quot;
+OUT_DIR = Path(&quot;output&quot;) / &quot;examples&quot; / &quot;02_crt_demo&quot;
+OUT_DIR.mkdir(parents=True, exist_ok=True)
+
+np.random.seed(SEED)
+print(f&quot;SEED={SEED}  LITE={LITE}  VV_DELAY_MS={VV_DELAY_MS}&quot;)
+print(&quot;DATA_DIR:&quot;, DATA_DIR)
+print(&quot;OUT_DIR:&quot;, OUT_DIR)
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Mesh-assets">
+<h2>Mesh assets<a class="headerlink" href="#Mesh-assets" title="Link to this heading">¶</a></h2>
+<p>We use the two open-surface endocardial meshes:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">crtdemo_LVendo_heart_cut.obj</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">crtdemo_RVendo_heart_cut.obj</span></code></p></li>
+</ul>
+<p>If missing locally, they are downloaded from the repo. We load them via PyVista, clean, and triangulate.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span># Ensure demo OBJ files exist (download from repo if missing)
+import urllib.request
+
+LV_OBJ = DATA_DIR / &quot;crtdemo_LVendo_heart_cut.obj&quot;
+RV_OBJ = DATA_DIR / &quot;crtdemo_RVendo_heart_cut.obj&quot;
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+def _try_fetch(url: str, dst: Path):
+    try:
+        print(&quot;Downloading:&quot;, url)
+        with urllib.request.urlopen(url, timeout=30) as r, open(dst, &quot;wb&quot;) as f:
+            f.write(r.read())
+        return True
+    except Exception as e:
+        print(&quot;  failed:&quot;, e)
+        return False
+
+if not LV_OBJ.exists():
+    for base in [
+        &quot;https://raw.githubusercontent.com/ricardogr07/purkinje-uv/main/data/crtdemo/&quot;,
+        &quot;https://raw.githubusercontent.com/ricardogr07/purkinje-uv/feat/create-examples-tutorials/data/crtdemo/&quot;,
+    ]:
+        if _try_fetch(base + LV_OBJ.name, LV_OBJ):
+            break
+
+if not RV_OBJ.exists():
+    for base in [
+        &quot;https://raw.githubusercontent.com/ricardogr07/purkinje-uv/main/data/crtdemo/&quot;,
+        &quot;https://raw.githubusercontent.com/ricardogr07/purkinje-uv/feat/create-examples-tutorials/data/crtdemo/&quot;,
+    ]:
+        if _try_fetch(base + RV_OBJ.name, RV_OBJ):
+            break
+
+assert LV_OBJ.exists(), f&quot;Missing LV OBJ: {LV_OBJ}&quot;
+assert RV_OBJ.exists(), f&quot;Missing RV OBJ: {RV_OBJ}&quot;
+print(&quot;LV_OBJ:&quot;, LV_OBJ)
+print(&quot;RV_OBJ:&quot;, RV_OBJ)
+
+# Load with PyVista and verify they&#39;re open surfaces
+def load_surface(path: Path) -&gt; pv.PolyData:
+    mesh = pv.read(str(path))
+    if not isinstance(mesh, pv.PolyData):
+        mesh = mesh.extract_geometry()
+    mesh = mesh.clean().triangulate()
+    return mesh
+
+surf_lv = load_surface(LV_OBJ)
+surf_rv = load_surface(RV_OBJ)
+
+def is_open_surface(pd: pv.PolyData) -&gt; bool:
+    edges = pd.extract_feature_edges(boundary_edges=True, feature_edges=False,
+                                     manifold_edges=False, non_manifold_edges=True)
+    return edges.n_cells &gt; 0
+
+print(f&quot;LV: points={surf_lv.n_points} faces={surf_lv.n_cells} open={is_open_surface(surf_lv)}&quot;)
+print(f&quot;RV: points={surf_rv.n_points} faces={surf_rv.n_cells} open={is_open_surface(surf_rv)}&quot;)
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Paper-ground-truth-seeds-&amp;-parameters">
+<h2>Paper ground-truth seeds &amp; parameters<a class="headerlink" href="#Paper-ground-truth-seeds-&-parameters" title="Link to this heading">¶</a></h2>
+<p>We follow the published demo by using fixed <strong>vertex indices</strong> for the first two nodes per chamber and the same parameter values:</p>
+<ul class="simple">
+<li><p><strong>Seeds</strong> (0-based): LV <code class="docutils literal notranslate"><span class="pre">(388,</span> <span class="pre">412)</span></code>, RV <code class="docutils literal notranslate"><span class="pre">(198,</span> <span class="pre">186)</span></code></p></li>
+<li><p>Key parameters (per demo):
+<code class="docutils literal notranslate"><span class="pre">N_it=20</span></code>, <code class="docutils literal notranslate"><span class="pre">branch_angle=0.15</span></code>, <code class="docutils literal notranslate"><span class="pre">l_segment=1.0</span></code>, <code class="docutils literal notranslate"><span class="pre">length=8.0</span></code>, <code class="docutils literal notranslate"><span class="pre">w=0.1</span></code>,
+plus small chamber-specific <strong>fascicle angles/lengths</strong> and <strong>init_length</strong>.</p></li>
+</ul>
+<p>To avoid “initial branch goes out of the domain”, we <strong>retry</strong> with a shorter <code class="docutils literal notranslate"><span class="pre">init_length</span></code> automatically.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span># --- Paper ground-truth preset (from PurkinjeECG demo) ---
+
+from dataclasses import asdict
+
+# 0-based vertex indices on the demo meshes (LV: 441 pts, RV: 817 pts in our copy)
+LV_SEEDS = (388, 412)
+RV_SEEDS = (198, 186)
+
+# Ground-truth values (already scaled in the demo: 0.5 on lengths, 0.1 on angles)
+LV_INIT_LENGTH = float(35.931537038275316)
+RV_INIT_LENGTH = float(79.86354832236707)
+
+LV_FAS_LEN = [float(0.5*4.711579058738858), float(0.5*9.129484609771032)]
+RV_FAS_LEN = [float(0.5*21.703867933650002), float(0.5*5.79561866201451)]
+
+LV_FAS_ANG = [float(0.1*0.14448952070696136), float(0.1*0.23561944901923448)]
+RV_FAS_ANG = [float(0.1*0.23561944901923448), float(0.1*0.23561944901923448)]
+
+COMMON = dict(
+    length=8.0,          # step length along branches
+    w=0.1,               # lateral bias
+    l_segment=1.0,       # base segment length
+    branch_angle=0.15,   # split angle
+    N_it=20              # depth
+)
+
+def clamp_seeds(surf, seeds):
+    n = surf.n_points
+    return tuple(int(max(0, min(n-1, s))) for s in seeds)
+
+LV_SEEDS = clamp_seeds(surf_lv, LV_SEEDS)
+RV_SEEDS = clamp_seeds(surf_rv, RV_SEEDS)
+
+def build_params_paper(chamber, meshfile, seeds):
+    if chamber == &quot;LV&quot;:
+        init_len = LV_INIT_LENGTH
+        fas_len  = LV_FAS_LEN
+        fas_ang  = LV_FAS_ANG
+    else:
+        init_len = RV_INIT_LENGTH
+        fas_len  = RV_FAS_LEN
+        fas_ang  = RV_FAS_ANG
+    return FractalTreeParameters(
+        meshfile=str(meshfile),
+        init_node_id=seeds[0],
+        second_node_id=seeds[1],
+        init_length=init_len,
+        length=COMMON[&quot;length&quot;],
+        w=COMMON[&quot;w&quot;],
+        l_segment=COMMON[&quot;l_segment&quot;],
+        fascicles_length=fas_len,
+        fascicles_angles=fas_ang,
+        branch_angle=COMMON[&quot;branch_angle&quot;],
+        N_it=COMMON[&quot;N_it&quot;],
+    )
+
+def with_init_length(p: FractalTreeParameters, new_init):
+    # dataclass is frozen; rebuild with the updated init_length
+    d = asdict(p)
+    d[&quot;init_length&quot;] = float(new_init)
+    return FractalTreeParameters(**d)
+
+def grow_with_retry(params, scales=(1.0, 0.75, 0.5, 0.35, 0.25)):
+    last_err = None
+    for s in scales:
+        p_try = with_init_length(params, params.init_length * s)
+        try:
+            ft = FractalTree(params=p_try)
+            ft.grow_tree()
+            return ft, p_try
+        except RuntimeError as e:
+            last_err = e
+            if &quot;out of the domain&quot; in str(e):
+                continue
+            raise
+    raise RuntimeError(f&quot;Failed to grow even after shrinking init_length. Last error: {last_err}&quot;)
+
+# Build params and grow using the paper preset
+params_lv = build_params_paper(&quot;LV&quot;, LV_OBJ, LV_SEEDS)
+params_rv = build_params_paper(&quot;RV&quot;, RV_OBJ, RV_SEEDS)
+print(&quot;Paper preset params (LV):&quot;, params_lv)
+print(&quot;Paper preset params (RV):&quot;, params_rv)
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Grow-LV/RV-trees-and-export">
+<h2>Grow LV/RV trees and export<a class="headerlink" href="#Grow-LV/RV-trees-and-export" title="Link to this heading">¶</a></h2>
+<p>After growth we report node/edge/PMJ counts and export:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">lv_tree_AT.vtu</span></code>, <code class="docutils literal notranslate"><span class="pre">rv_tree_AT.vtu</span></code> — trees with activation arrays</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">lv_pmj.vtu</span></code>, <code class="docutils literal notranslate"><span class="pre">rv_pmj.vtu</span></code> — PMJ locations</p></li>
+</ul>
+<p>A quick sanity activation is run per chamber (root &#64; 0 s) to verify ranges.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>ft_lv, params_lv = grow_with_retry(params_lv)
+ft_rv, params_rv = grow_with_retry(params_rv)
+
+nodes_lv, edges_lv, pmj_lv = np.asarray(ft_lv.nodes_xyz), np.asarray(ft_lv.connectivity), np.asarray(ft_lv.end_nodes)
+nodes_rv, edges_rv, pmj_rv = np.asarray(ft_rv.nodes_xyz), np.asarray(ft_rv.connectivity), np.asarray(ft_rv.end_nodes)
+
+print(f&quot;LV: nodes={len(nodes_lv)} edges={len(edges_lv)} pmj={len(pmj_lv)}&quot;)
+print(f&quot;RV: nodes={len(nodes_rv)} edges={len(edges_rv)} pmj={len(pmj_rv)}&quot;)
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>def solve_activation(P: PurkinjeTree, sources, unit=&quot;s&quot;):
+    x0 = np.array([s[0] for s in sources], dtype=int)
+    t  = np.array([float(s[1]) for s in sources], dtype=float)
+    if unit == &quot;ms&quot;:
+        t = t / 1000.0
+    return P.activate_fim(x0=x0, x0_vals=t, return_only_pmj=False)
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span># Build PurkinjeTree objects from these ground-truth trees
+P_lv = PurkinjeTree(nodes_lv, edges_lv, pmj_lv)
+P_rv = PurkinjeTree(nodes_rv, edges_rv, pmj_rv)
+
+# quick baseline sanity
+AT_lv_baseline = solve_activation(P_lv, sources=[(0, 0.0)])
+AT_rv_baseline = solve_activation(P_rv, sources=[(0, 0.0)])
+print(&quot;Baseline sanity — LV AT(min/max):&quot;, float(AT_lv_baseline.min()), float(AT_lv_baseline.max()))
+print(&quot;Baseline sanity — RV AT(min/max):&quot;, float(AT_rv_baseline.min()), float(AT_rv_baseline.max()))
+
+# (optional: rename *_gt.vtu if you like)
+lv_tree_path = OUT_DIR / &quot;lv_tree_AT.vtu&quot;
+rv_tree_path = OUT_DIR / &quot;rv_tree_AT.vtu&quot;
+lv_pmj_path  = OUT_DIR / &quot;lv_pmj.vtu&quot;
+rv_pmj_path  = OUT_DIR / &quot;rv_pmj.vtu&quot;
+
+P_lv.save(str(lv_tree_path)); P_lv.save_pmjs(str(lv_pmj_path))
+P_rv.save(str(rv_tree_path)); P_rv.save_pmjs(str(rv_pmj_path))
+
+print(&quot;Wrote:&quot;)
+print(&quot; -&quot;, lv_tree_path)
+print(&quot; -&quot;, rv_tree_path)
+print(&quot; -&quot;, lv_pmj_path)
+print(&quot; -&quot;, rv_pmj_path)
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Merge-&amp;-activation-scenarios">
+<h2>Merge &amp; activation scenarios<a class="headerlink" href="#Merge-&-activation-scenarios" title="Link to this heading">¶</a></h2>
+<p>We merge LV and RV into a single disconnected tree (LV nodes first, then RV) and define:</p>
+<ul class="simple">
+<li><p><strong>baseline</strong>: <code class="docutils literal notranslate"><span class="pre">[(LV,</span> <span class="pre">0.0),</span> <span class="pre">(RV,</span> <span class="pre">0.0)]</span></code></p></li>
+<li><p><strong>rv_only</strong>: <code class="docutils literal notranslate"><span class="pre">[(RV,</span> <span class="pre">0.0)]</span></code> → LV becomes unreached (we mask huge times)</p></li>
+<li><p><strong>biv</strong>: <code class="docutils literal notranslate"><span class="pre">[(RV,</span> <span class="pre">0.0),</span> <span class="pre">(LV,</span> <span class="pre">VV_DELAY_MS/1000)]</span></code></p></li>
+<li><p><strong>biv_paper</strong>: <code class="docutils literal notranslate"><span class="pre">[(LV,</span> <span class="pre">0.0),</span> <span class="pre">(RV,</span> <span class="pre">0.075)]</span></code> for <code class="docutils literal notranslate"><span class="pre">ROOT_TIME_MS</span> <span class="pre">=</span> <span class="pre">-75</span></code></p></li>
+</ul>
+<blockquote>
+<div><p>Units: the solver expects seconds; we convert milliseconds as needed.</p>
+</div></blockquote>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span># --- Helpers + Merge LV/RV into a single (disconnected) tree ---
+
+INF_CUTOFF = 1e6  # treat &gt;= this as &quot;unreached&quot; for display
+
+def merge_trees(nodes_a, edges_a, pmj_a, nodes_b, edges_b, pmj_b):
+    nA = nodes_a.shape[0]
+    nodes = np.vstack([nodes_a, nodes_b])
+    edges = np.vstack([edges_a, edges_b + nA])
+    pmj   = np.concatenate([pmj_a, pmj_b + nA])
+    return nodes, edges, pmj
+
+def build_P(nodes, edges, pmj) -&gt; PurkinjeTree:
+    return PurkinjeTree(
+        nodes=np.asarray(nodes, dtype=float),
+        connectivity=np.asarray(edges, dtype=int),
+        end_nodes=np.asarray(pmj, dtype=int)
+    )
+
+def nearest_map_activation(surface: pv.PolyData, nodes_xyz: np.ndarray, AT: np.ndarray, chunk=2000):
+    &quot;&quot;&quot;Nearest-neighbor map of node AT to each surface vertex.&quot;&quot;&quot;
+    pts = surface.points
+    out = np.empty(pts.shape[0], dtype=float)
+    for i in range(0, pts.shape[0], chunk):
+        j = min(i + chunk, pts.shape[0])
+        d2 = np.sum((pts[i:j, None, :] - nodes_xyz[None, :, :])**2, axis=2)
+        out[i:j] = AT[np.argmin(d2, axis=1)]
+    s = surface.copy(deep=True)
+    s.point_data.clear()
+    s.point_data[&quot;AT&quot;] = out
+    return s
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span># Merge
+nodes_biv, edges_biv, pmj_biv = merge_trees(nodes_lv, edges_lv, pmj_lv, nodes_rv, edges_rv, pmj_rv)
+P_biv = build_P(nodes_biv, edges_biv, pmj_biv)
+
+# Root indices in merged space (LV block first, then RV)
+n_lv = nodes_lv.shape[0]
+idx_lv_root = 0
+idx_rv_root = n_lv
+
+print(&quot;Merged tree:&quot;, nodes_biv.shape, edges_biv.shape, pmj_biv.shape)
+print(&quot;Root indices → LV:&quot;, idx_lv_root, &quot;RV:&quot;, idx_rv_root)
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span># --- Scenarios: baseline, rv_only, biv (uses VV_DELAY_MS from above) ---
+
+def finite_minmax(a):
+    f = np.isfinite(a) &amp; (a &lt; INF_CUTOFF)
+    return (float(np.nanmin(a[f])) if np.any(f) else np.nan), (float(np.nanmax(a[f])) if np.any(f) else np.nan)
+
+scenarios = {}
+
+# both roots @ 0
+scenarios[&quot;baseline&quot;] = solve_activation(P_biv, [(idx_lv_root, 0.0), (idx_rv_root, 0.0)])
+
+# RV only (LV should be &quot;unreached&quot; → very large)
+scenarios[&quot;rv_only&quot;]  = solve_activation(P_biv, [(idx_rv_root, 0.0)])
+
+# BiV: RV @ 0, LV @ delay (ms → s)
+scenarios[&quot;biv&quot;]      = solve_activation(P_biv, [(idx_rv_root, 0.0), (idx_lv_root, VV_DELAY_MS/1000.0)])
+
+
+# BiV with paper-style VV offset (LV early by 75 ms if negative)
+ROOT_TIME_MS = -75.0  # LV earlier by 75 ms (paper demo)
+src = ([(idx_lv_root, 0.0), (idx_rv_root, abs(ROOT_TIME_MS)/1000.0)]
+       if ROOT_TIME_MS &lt; 0
+       else [(idx_rv_root, 0.0), (idx_lv_root, abs(ROOT_TIME_MS)/1000.0)])
+scenarios[&quot;biv_paper&quot;] = solve_activation(P_biv, src)
+
+for name, AT in scenarios.items():
+    lo, hi = finite_minmax(AT)
+    print(f&quot;{name}: AT finite min/max = {lo:.4f} / {hi:.4f}&quot;)
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Map-activation-to-surfaces-&amp;-save-VTP">
+<h2>Map activation to surfaces &amp; save VTP<a class="headerlink" href="#Map-activation-to-surfaces-&-save-VTP" title="Link to this heading">¶</a></h2>
+<p>Activation at nodes is transferred to the LV/RV surfaces via nearest neighbor and written as:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">lv_surface_AT_&lt;scenario&gt;.vtp</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">rv_surface_AT_&lt;scenario&gt;.vtp</span></code></p></li>
+</ul>
+<p>Mapped scalar name: <strong>``AT``</strong>. Extremely large values (unreached) are replaced with <code class="docutils literal notranslate"><span class="pre">NaN</span></code> to keep colorbars useful.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span># --- Map node AT → LV/RV surfaces and export VTP per scenario ---
+
+def export_surface_AT(name: str, AT_biv: np.ndarray):
+    # split per chamber
+    AT_lv = AT_biv[:n_lv]
+    AT_rv = AT_biv[n_lv:]
+    # map to surfaces
+    lv_surf = nearest_map_activation(surf_lv, nodes_lv, AT_lv)
+    rv_surf = nearest_map_activation(surf_rv, nodes_rv, AT_rv)
+    # optionally mask huge times to NaN for nicer colorbars in viewers
+    for s in (lv_surf, rv_surf):
+        if &quot;AT&quot; in s.point_data:
+            at = s.point_data[&quot;AT&quot;]
+            at = np.where(np.isfinite(at) &amp; (at &lt; INF_CUTOFF), at, np.nan)
+            s.point_data[&quot;AT&quot;] = at
+    # save
+    lv_path = OUT_DIR / f&quot;lv_surface_AT_{name}.vtp&quot;
+    rv_path = OUT_DIR / f&quot;rv_surface_AT_{name}.vtp&quot;
+    lv_surf.save(str(lv_path))
+    rv_surf.save(str(rv_path))
+    print(&quot;Saved:&quot;, lv_path.name, &quot;|&quot;, rv_path.name)
+
+for scen, AT in scenarios.items():
+    export_surface_AT(scen, AT)
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span># --- Save the merged tree geometry per scenario (same geometry each time) ---
+
+def save_tree_geom(name: str):
+    Ptmp = build_P(nodes_biv, edges_biv, pmj_biv)
+    path = OUT_DIR / f&quot;biv_tree_{name}.vtu&quot;
+    Ptmp.save(str(path))
+    print(&quot;Saved:&quot;, path.name)
+
+for scen in scenarios.keys():
+    save_tree_geom(scen)
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Interactive-3D-viewer-(Plotly)">
+<h2>Interactive 3D viewer (Plotly)<a class="headerlink" href="#Interactive-3D-viewer-(Plotly)" title="Link to this heading">¶</a></h2>
+<p>Use the dropdown to switch scenarios. Layers include:</p>
+<ul class="simple">
+<li><p>LV/RV <strong>surfaces</strong> colored by <code class="docutils literal notranslate"><span class="pre">AT</span></code> (semi-transparent)</p></li>
+<li><p>LV/RV <strong>tree polylines</strong> (bold, high contrast)</p></li>
+<li><p>Node <strong>points</strong> colored by <code class="docutils literal notranslate"><span class="pre">AT</span></code></p></li>
+<li><p><strong>PMJs</strong> (squares)</p></li>
+</ul>
+<p>Tips:</p>
+<ul class="simple">
+<li><p>Click legend entries to toggle layers.</p></li>
+<li><p>Adjust styling at the top of the cell:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">SURF_OPACITY</span></code> (e.g., <code class="docutils literal notranslate"><span class="pre">0.08–0.15</span></code>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">TREE_WIDTH</span></code> (e.g., <code class="docutils literal notranslate"><span class="pre">3–9</span></code>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">NODE_SIZE</span></code>, <code class="docutils literal notranslate"><span class="pre">PMJ_SIZE</span></code></p></li>
+</ul>
+</li>
+</ul>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span># --- Plotly viewer with scenario dropdown (Colab-friendly, high-contrast) ---
+
+SURF_OPACITY = 0.12
+TREE_WIDTH   = 3
+NODE_SIZE    = 5
+PMJ_SIZE     = 4
+LV_TREE_COL  = &quot;#111111&quot;
+RV_TREE_COL  = &quot;#2b6cb0&quot;
+
+
+def mesh3d_with_AT(surface: pv.PolyData, name):
+    pts = surface.points
+    faces = surface.faces.reshape(-1, 4)[:, 1:]
+    at = surface.point_data.get(&quot;AT&quot;, None)
+    return go.Mesh3d(
+        x=pts[:,0], y=pts[:,1], z=pts[:,2],
+        i=faces[:,0], j=faces[:,1], k=faces[:,2],
+        name=name, opacity=SURF_OPACITY,
+        intensity=at if at is not None else None,
+        colorscale=&quot;Viridis&quot;,
+        showscale=True if at is not None else False,
+        colorbar=dict(title=&quot;AT&quot;) if at is not None else None,
+        lighting=dict(ambient=0.6, diffuse=0.6)
+    )
+
+def line_segments(points: np.ndarray, edges: np.ndarray, name, color, width=TREE_WIDTH):
+    xs, ys, zs = [], [], []
+    for u, v in edges:
+        xs += [points[u,0], points[v,0], None]
+        ys += [points[u,1], points[v,1], None]
+        zs += [points[u,2], points[v,2], None]
+    return go.Scatter3d(x=xs, y=ys, z=zs, mode=&quot;lines&quot;,
+                        line=dict(width=width, color=color),
+                        name=name, showlegend=True)
+
+def node_points(points: np.ndarray, at: np.ndarray, name):
+    c = np.where(np.isfinite(at) &amp; (at &lt; INF_CUTOFF), at, np.nan)
+    return go.Scatter3d(
+        x=points[:,0], y=points[:,1], z=points[:,2],
+        mode=&quot;markers&quot;, name=name, showlegend=True,
+        marker=dict(size=NODE_SIZE, color=c, colorscale=&quot;Viridis&quot;,
+                    line=dict(width=0.8, color=&quot;white&quot;),
+                    opacity=0.98, showscale=False)
+    )
+
+def pmj_points(points: np.ndarray, name, color):
+    if points.size == 0:
+        return go.Scatter3d(x=[], y=[], z=[], mode=&quot;markers&quot;, name=name)
+    return go.Scatter3d(
+        x=points[:,0], y=points[:,1], z=points[:,2],
+        mode=&quot;markers&quot;, name=name, showlegend=True,
+        marker=dict(size=PMJ_SIZE, color=color, symbol=&quot;square&quot;, opacity=0.95)
+    )
+
+# Prepare per-scenario surfaces (already saved above, but we’ll compute in-memory again)
+surfaces_by_scen = {}
+ats_nodes_by_scen = {}
+for scen, AT in scenarios.items():
+    AT_lv = AT[:n_lv]
+    AT_rv = AT[n_lv:]
+    lv_surf = nearest_map_activation(surf_lv, nodes_lv, AT_lv)
+    rv_surf = nearest_map_activation(surf_rv, nodes_rv, AT_rv)
+    # mask huge for display
+    for s in (lv_surf, rv_surf):
+        at = s.point_data[&quot;AT&quot;]
+        s.point_data[&quot;AT&quot;] = np.where(np.isfinite(at) &amp; (at &lt; INF_CUTOFF), at, np.nan)
+    surfaces_by_scen[scen] = (lv_surf, rv_surf)
+    ats_nodes_by_scen[scen] = (AT_lv, AT_rv)
+
+pmj_coords_lv = nodes_lv[pmj_lv] if pmj_lv.size else np.empty((0,3))
+pmj_coords_rv = nodes_rv[pmj_rv] if pmj_rv.size else np.empty((0,3))
+
+# scenario order
+ordered   = [&quot;baseline&quot;, &quot;rv_only&quot;, &quot;biv&quot;, &quot;biv_paper&quot;]
+scen_list = [s for s in ordered if s in scenarios] or list(scenarios.keys())
+
+
+# build traces
+traces, masks = [], []
+for scen in scen_list:
+    lv_surf, rv_surf = surfaces_by_scen[scen]
+    AT_lv, AT_rv = ats_nodes_by_scen[scen]
+
+    traces += [
+        mesh3d_with_AT(lv_surf, &quot;LV surface&quot;),
+        mesh3d_with_AT(rv_surf, &quot;RV surface&quot;),
+        line_segments(nodes_lv, edges_lv, &quot;LV tree&quot;, LV_TREE_COL),
+        line_segments(nodes_rv, edges_rv, &quot;RV tree&quot;, RV_TREE_COL),
+        node_points(nodes_lv, AT_lv, &quot;LV nodes (AT)&quot;),
+        node_points(nodes_rv, AT_rv, &quot;RV nodes (AT)&quot;),
+        pmj_points(pmj_coords_lv, &quot;LV PMJs&quot;, &quot;crimson&quot;),
+        pmj_points(pmj_coords_rv, &quot;RV PMJs&quot;, &quot;orange&quot;),
+    ]
+    mask = [False] * (8 * len(scen_list))
+    base = scen_list.index(scen) * 8
+    for k in range(base, base+8): mask[k] = True
+    masks.append(mask)
+
+fig = go.Figure(data=traces)
+# show first scenario
+if masks:
+    for tr, vis in zip(fig.data, masks[0]):
+        tr.visible = vis
+
+# dropdown
+fig.update_layout(
+    updatemenus=[dict(type=&quot;dropdown&quot;,
+                      x=0.01, y=0.99, showactive=True,
+                      buttons=[dict(method=&quot;update&quot;, label=sc,
+                                    args=[{&quot;visible&quot;: masks[i]}])
+                               for i, sc in enumerate(scen_list)])],
+    scene=dict(aspectmode=&quot;data&quot;),
+    margin=dict(l=0, r=0, t=30, b=0),
+    title=f&quot;CRT Demo — scenarios: {&#39;, &#39;.join(scen_list)}&quot;
+)
+fig.show()
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Tuning-&amp;-variants">
+<h2>Tuning &amp; variants<a class="headerlink" href="#Tuning-&-variants" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p>Want denser coverage? Increase <code class="docutils literal notranslate"><span class="pre">N_it</span></code> or <code class="docutils literal notranslate"><span class="pre">length</span></code> (step) slightly.</p></li>
+<li><p>Shift VV timing: set <code class="docutils literal notranslate"><span class="pre">VV_DELAY_MS</span></code> at the top (e.g., <code class="docutils literal notranslate"><span class="pre">-40</span></code>, <code class="docutils literal notranslate"><span class="pre">0</span></code>, <code class="docutils literal notranslate"><span class="pre">+40</span></code>).</p></li>
+<li><p>Compare to paper timing: use <code class="docutils literal notranslate"><span class="pre">biv_paper</span></code> (LV early by 75 ms).</p></li>
+<li><p>Different seeds: replace <code class="docutils literal notranslate"><span class="pre">LV_SEEDS</span></code> / <code class="docutils literal notranslate"><span class="pre">RV_SEEDS</span></code> or switch to auto-seeding.</p></li>
+</ul>
+</section>
+<section id="Troubleshooting">
+<h2>Troubleshooting<a class="headerlink" href="#Troubleshooting" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p><strong>HTTP 404 on OBJ</strong>: ensure the data branch is reachable; the notebook will try both <code class="docutils literal notranslate"><span class="pre">main</span></code> and the examples branch.</p></li>
+<li><p><strong>“Initial branch goes out of the domain”</strong>: the notebook will retry with a shorter <code class="docutils literal notranslate"><span class="pre">init_length</span></code>. If it persists, pick a different seed pair.</p></li>
+<li><p><strong>Flat colorbar in ``rv_only``</strong>: expected — unreached LV is masked to <code class="docutils literal notranslate"><span class="pre">NaN</span></code>.</p></li>
+<li><p><strong>Slow mapping</strong>: reduce vertex count of the surface or increase batch size in <code class="docutils literal notranslate"><span class="pre">nearest_map_activation</span></code>.</p></li>
+</ul>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          
+          <a class="prev-page" href="01_ellipsoid_demo.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">01 — Ellipsoid</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2025, Ricardo García Ramírez
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">02 — CRT demo</a><ul>
+<li><a class="reference internal" href="#LV/RV-trees,-activation,-and-BiV-scenarios">LV/RV trees, activation, and BiV scenarios</a></li>
+<li><a class="reference internal" href="#Environment-&amp;-dependencies">Environment &amp; dependencies</a></li>
+<li><a class="reference internal" href="#Reproducibility-knobs-&amp;-paths">Reproducibility knobs &amp; paths</a></li>
+<li><a class="reference internal" href="#Mesh-assets">Mesh assets</a></li>
+<li><a class="reference internal" href="#Paper-ground-truth-seeds-&amp;-parameters">Paper ground-truth seeds &amp; parameters</a></li>
+<li><a class="reference internal" href="#Grow-LV/RV-trees-and-export">Grow LV/RV trees and export</a></li>
+<li><a class="reference internal" href="#Merge-&amp;-activation-scenarios">Merge &amp; activation scenarios</a></li>
+<li><a class="reference internal" href="#Map-activation-to-surfaces-&amp;-save-VTP">Map activation to surfaces &amp; save VTP</a></li>
+<li><a class="reference internal" href="#Interactive-3D-viewer-(Plotly)">Interactive 3D viewer (Plotly)</a></li>
+<li><a class="reference internal" href="#Tuning-&amp;-variants">Tuning &amp; variants</a></li>
+<li><a class="reference internal" href="#Troubleshooting">Troubleshooting</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script src="../_static/documentation_options.js?v=e259d695"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=ccdb6887"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    </body>
+</html>
