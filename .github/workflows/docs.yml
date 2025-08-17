@@ -2,13 +2,10 @@ name: Build Documentation
 
 on:
   push:
-    branches:
-      - main
-    tags:
-      - 'v*.*.*'      # build on semver tags
+    branches: [ main ]
+    tags:     [ 'v*.*.*' ]
   pull_request:
-    branches:
-      - main
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
@@ -17,100 +14,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0          # required so SMV sees history
-          fetch-tags: true        # fetch tags too
-
-      - name: Ensure tags and local main exist
-        shell: bash
-        run: |
-          set -euxo pipefail
-          git fetch origin --tags --prune
-          git fetch origin main            # ensure origin/main exists
-          # create a local main branch IF missing (avoid fetching into checked-out branch)
-          if ! git show-ref --verify --quiet refs/heads/main; then
-            git branch main origin/main
-          fi
-          git branch -a
-          git tag --list
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.10.6"
-
-      - name: Install project with [docs] extras
-        run: |
-          python -m pip install --upgrade pip setuptools wheel
-          pip install -e ".[docs]"
-
-      # Select refs: main + latest N semver tags (adjust N below)
-      - name: Select versions to build (main + latest N tags)
-        env:
-          LATEST_N: 2
-        shell: bash
-        run: |
-          set -euxo pipefail
-          TAGS=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n ${LATEST_N} || true)
-          if [ -n "${TAGS}" ]; then
-            REGEX="^($(echo ${TAGS} | tr ' ' '|'))$"
-          else
-            REGEX="^$"
-          fi
-          echo "SMV_BRANCH_WHITELIST=^(main)$" >> $GITHUB_ENV
-          echo "SMV_TAG_WHITELIST=${REGEX}"     >> $GITHUB_ENV
-
-      - name: Build Multi-Version HTML
-        run: |
-          sphinx-multiversion docs docs/_build/html
-
-      - name: Generate switcher.json
-        run: |
-          python - <<'PY'
-          import json, pathlib, re, os
-
-          repo = os.environ.get("GITHUB_REPOSITORY","").split("/")[-1]
-          root = pathlib.Path("docs/_build/html")
-
-          # collect version folders (main + semver tags)
-          pat = re.compile(r'^(main|v\d+\.\d+\.\d+)$')
-          versions = sorted(
-              [p.name for p in root.iterdir() if p.is_dir() and pat.match(p.name)],
-              key=lambda v: (
-                  0 if v == "main" else 1,
-                  tuple(map(int, re.findall(r'\d+', v))) if v.startswith('v') else ()
-              )
-          )
-
-          base = f"/{repo}"
-          data = [{"version": v, "name": ("main" if v == "main" else v), "url": f"{base}/{v}/"} for v in versions]
-
-          # mark newest tag as preferred
-          tags = [d for d in data if d["version"].startswith("v")]
-          if tags:
-              tags.sort(key=lambda d: tuple(map(int, re.findall(r'\d+', d["version"]))), reverse=True)
-              tags[0]["preferred"] = True
-
-          (root / "switcher.json").write_text(json.dumps(data, indent=2), encoding="utf-8")
-          print("Wrote", root / "switcher.json")
-          PY
-
-  deploy:
-    name: Deploy to GitHub Pages
-    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
-    needs: docs
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout Repository
+      - name: Checkout repository (full history + tags)
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           fetch-tags: true
 
-      - name: Ensure tags and local main exist
+      - name: Ensure remote refs exist
         shell: bash
         run: |
           set -euxo pipefail
@@ -127,44 +37,79 @@ jobs:
         with:
           python-version: "3.10.6"
 
+      - name: Install pandoc (required by nbsphinx)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pandoc
+          pandoc --version
+
       - name: Install project with [docs] extras
         run: |
+          python -m pip install -U pip setuptools wheel
           pip install -e ".[docs]"
 
-      - name: Build Multi-Version HTML
+      # main + latest N semver tags
+      - name: Select versions to build (main + latest N tags)
+        env:
+          LATEST_N: 2
+        shell: bash
         run: |
-          sphinx-multiversion docs docs/_build/html
+          set -euxo pipefail
+          TAGS=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n ${LATEST_N} || true)
+          if [ -n "${TAGS}" ]; then
+            REGEX="^($(echo ${TAGS} | tr ' ' '|'))$"
+          else
+            REGEX="^$"
+          fi
+          echo "SMV_BRANCH_WHITELIST=^(main)$" >> $GITHUB_ENV
+          echo "SMV_TAG_WHITELIST=${REGEX}"     >> $GITHUB_ENV
+
+      - name: Build multi-version HTML (prefer remote refs)
+        env:
+          SMV_BRANCH_WHITELIST: ${{ env.SMV_BRANCH_WHITELIST }}
+          SMV_TAG_WHITELIST:    ${{ env.SMV_TAG_WHITELIST }}
+        run: |
+          sphinx-multiversion -D smv_prefer_remote_refs=True docs docs/_build/html
 
       - name: Generate switcher.json
         run: |
           python - <<'PY'
           import json, pathlib, re, os
-
           repo = os.environ.get("GITHUB_REPOSITORY","").split("/")[-1]
           root = pathlib.Path("docs/_build/html")
-
-          # collect version folders (main + semver tags)
           pat = re.compile(r'^(main|v\d+\.\d+\.\d+)$')
           versions = sorted(
               [p.name for p in root.iterdir() if p.is_dir() and pat.match(p.name)],
-              key=lambda v: (
-                  0 if v == "main" else 1,
-                  tuple(map(int, re.findall(r'\d+', v))) if v.startswith('v') else ()
-              )
+              key=lambda v: (0 if v=="main" else 1, tuple(map(int, re.findall(r'\d+', v))) if v.startswith('v') else ())
           )
-
           base = f"/{repo}"
-          data = [{"version": v, "name": ("main" if v == "main" else v), "url": f"{base}/{v}/"} for v in versions]
-
-          # mark newest tag as preferred
+          data = [{"version": v, "name": ("main" if v=="main" else v), "url": f"{base}/{v}/"} for v in versions]
           tags = [d for d in data if d["version"].startswith("v")]
           if tags:
               tags.sort(key=lambda d: tuple(map(int, re.findall(r'\d+', d["version"]))), reverse=True)
               tags[0]["preferred"] = True
-
           (root / "switcher.json").write_text(json.dumps(data, indent=2), encoding="utf-8")
           print("Wrote", root / "switcher.json")
           PY
+
+      - name: Upload built site as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: docs/_build/html
+
+  deploy:
+    name: Deploy to GitHub Pages
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+    needs: docs
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download site artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: site
+          path: docs/_build/html
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
