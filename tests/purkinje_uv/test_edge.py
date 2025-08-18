@@ -4,9 +4,13 @@ This test suite verifies that the Edge class correctly initializes
 its attributes and computes a normalized direction vector between
 two nodes in 3D space.
 """
+from __future__ import annotations
+
 import numpy as np
 import pytest
+
 from purkinje_uv.edge import Edge
+import purkinje_uv as puv
 
 
 def test_edge_direction_unit_vector():
@@ -132,3 +136,55 @@ def test_edge_direction_zero_vector():
 
     # Check the error message matches expected
     assert "zero magnitude" in str(exc_info.value).lower()
+
+
+def _gpu_available() -> bool:
+    try:
+        import cupy as cp  # noqa: F401
+        import cupy
+
+        return cupy.cuda.runtime.getDeviceCount() > 0
+    except Exception:
+        return False
+
+
+def gpu_test(fn):
+    return pytest.mark.gpu(
+        pytest.mark.skipif(not _gpu_available(), reason="GPU not available for CuPy.")(
+            fn
+        )
+    )
+
+
+@gpu_test
+def test_edge_cpu_vs_gpu_identical_direction() -> None:
+    nodes = [
+        np.array([0.0, 0.0, 0.0]),
+        np.array([1.0, 1.0, 1.0]),
+    ]
+
+    with puv.use("cpu", seed=0):
+        edge_cpu = Edge(0, 1, nodes, parent=None, branch=None)
+        dir_cpu = edge_cpu.dir.copy()
+
+    with puv.use("gpu", seed=0, strict=True):
+        edge_gpu = Edge(0, 1, nodes, parent=None, branch=None)
+        dir_gpu = edge_gpu.dir.copy()
+
+    np.testing.assert_allclose(dir_gpu, dir_cpu, rtol=1e-12, atol=1e-12)
+
+
+@gpu_test
+def test_edge_accepts_cupy_input_and_returns_numpy() -> None:
+    import cupy as cp
+
+    nodes_cp = [
+        cp.asarray([0.0, 0.0, 0.0]),
+        cp.asarray([2.0, 0.0, 0.0]),
+    ]
+
+    with puv.use("gpu", seed=0, strict=True):
+        edge = Edge(0, 1, nodes_cp, parent=None, branch=None)
+
+    assert isinstance(edge.dir, np.ndarray)
+    np.testing.assert_allclose(edge.dir, np.array([1.0, 0.0, 0.0]), rtol=0, atol=0)
