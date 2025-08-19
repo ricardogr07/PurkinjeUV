@@ -11,6 +11,7 @@ This test suite verifies the functionality of the Nodes class, including:
 from purkinje_uv import Nodes
 import numpy as np
 from numpy.testing import assert_allclose
+import pytest
 
 
 def test_nodes_initialization():
@@ -291,3 +292,92 @@ def test_gradient_direction():
 
     expected = query_point / np.linalg.norm(query_point)
     assert_allclose(grad, expected)
+
+
+@pytest.mark.gpu
+def test_nodes_accepts_cupy_inputs_and_returns_numpy_state() -> None:
+    """Nodes should accept CuPy arrays for init/add and operate normally."""
+    import cupy as cp
+    import purkinje_uv as puv
+
+    with puv.use("gpu", seed=0, strict=True):
+        init_cp = cp.asarray([0.0, 0.0, 0.0])
+        nm = Nodes(init_cp)
+
+        added = nm.add_nodes([cp.asarray([1.0, 0.0, 0.0]), cp.asarray([0.0, 2.0, 0.0])])
+        assert added == [1, 2]
+
+        # Internal storage is NumPy by design
+        assert all(isinstance(p, np.ndarray) for p in nm.nodes)
+
+        # distance_from_point should accept CuPy input too (to_cpu conversions)
+        d = nm.distance_from_point(cp.asarray([0.0, 1.5, 0.0]))
+        assert np.isclose(d, 0.5)
+
+
+@pytest.mark.gpu
+def test_nodes_cpu_vs_gpu_distance_and_gradient_identical() -> None:
+    """Distances and gradients match between CPU and GPU cases."""
+    import cupy as cp
+    import purkinje_uv as puv
+
+    # Build a tiny deterministic cloud
+    pts_np = [
+        np.array([0.0, 0.0, 0.0]),
+        np.array([1.0, 0.0, 0.0]),
+        np.array([0.0, 1.0, 0.0]),
+    ]
+    q_np = np.array([0.25, 0.25, 0.0])
+
+    with puv.use("cpu", seed=0):
+        nm_cpu = Nodes(pts_np[0])
+        nm_cpu.add_nodes(pts_np[1:])
+        d_cpu = nm_cpu.distance_from_point(q_np)
+        g_cpu = nm_cpu.gradient(q_np)
+
+    with puv.use("gpu", seed=0, strict=True):
+        nm_gpu = Nodes(cp.asarray(pts_np[0]))
+        nm_gpu.add_nodes([cp.asarray(p) for p in pts_np[1:]])
+        d_gpu = nm_gpu.distance_from_point(cp.asarray(q_np))
+        g_gpu = nm_gpu.gradient(cp.asarray(q_np))
+
+    np.testing.assert_allclose(d_gpu, d_cpu, rtol=1e-12, atol=1e-12)
+    np.testing.assert_allclose(g_gpu, g_cpu, rtol=1e-12, atol=1e-12)
+
+
+@pytest.mark.gpu
+def test_update_collision_tree_all_excluded_gpu() -> None:
+    """Excluding all nodes on GPU inserts dummy key and behaves as expected."""
+    import cupy as cp
+    import purkinje_uv as puv
+
+    with puv.use("gpu", seed=0, strict=True):
+        nm = Nodes(cp.asarray([0.0, 0.0, 0.0]))
+        nm.add_nodes([cp.asarray([1.0, 0.0, 0.0]), cp.asarray([0.0, 1.0, 0.0])])
+
+        ok = nm.update_collision_tree(nodes_to_exclude=[0, 1, 2])
+        assert ok is True
+        assert nm.nodes_to_consider_keys == [100000000]  # sentinel
+
+        # Collision returns dummy index and the correct distance
+        q = np.array([0.0, 0.0, 0.0])
+        idx, dist = nm.collision(q)
+        assert idx == 100000000
+        expected = np.linalg.norm(q - np.array([-1e11, -1e11, -1e11]))
+        assert np.isclose(dist, expected)
+
+
+@pytest.mark.gpu
+def test_collision_respects_exclusions_on_gpu() -> None:
+    """Nearest index respects exclusions with GPU inputs."""
+    import cupy as cp
+    import purkinje_uv as puv
+
+    with puv.use("gpu", seed=0, strict=True):
+        nm = Nodes(cp.asarray([0.0, 0.0, 0.0]))  # index 0
+        nm.add_nodes([cp.asarray([2.0, 0.0, 0.0]), cp.asarray([0.0, 2.0, 0.0])])  # 1,2
+        nm.update_collision_tree(nodes_to_exclude=[2])  # keep 0 and 1
+
+        idx, dist = nm.collision(cp.asarray([2.1, 0.0, 0.0]))
+        assert idx == 1
+        assert np.isclose(dist, 0.1)
