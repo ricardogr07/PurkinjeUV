@@ -11,7 +11,7 @@ from typing import Any, Sequence
 import numpy as np
 from numpy.typing import NDArray
 
-from purkinje_uv import backend_name, norm, to_cpu, to_device, xp
+from .config import backend_name, norm, to_cpu, to_device, xp
 from .mesh import Mesh
 from .nodes import Nodes
 

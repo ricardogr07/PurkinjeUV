@@ -9,7 +9,7 @@ import logging
 from typing import Any, Optional, Sequence
 from numpy.typing import NDArray
 
-from purkinje_uv import backend_name, norm, to_cpu, to_device
+from .config import backend_name, norm, to_cpu, to_device
 
 _LOGGER = logging.getLogger(__name__)
 
