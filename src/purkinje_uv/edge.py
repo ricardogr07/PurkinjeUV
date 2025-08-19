@@ -11,7 +11,7 @@ from numpy.typing import NDArray
 
 from purkinje_uv import backend_name, norm, to_cpu, to_device
 
-_LOGGER = logging.getLogger("purkinje_uv.edge")
+_LOGGER = logging.getLogger(__name__)
 
 
 class Edge:

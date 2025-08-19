@@ -15,7 +15,7 @@ from purkinje_uv import backend_name, norm, to_cpu, to_device, xp
 from .mesh import Mesh
 from .nodes import Nodes
 
-_LOGGER = logging.getLogger("purkinje_uv.branch")
+_LOGGER = logging.getLogger(__name__)
 
 
 class Branch:
