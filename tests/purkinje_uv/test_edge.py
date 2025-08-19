@@ -10,7 +10,6 @@ import numpy as np
 import pytest
 
 from purkinje_uv.edge import Edge
-import purkinje_uv as puv
 
 
 def test_edge_direction_unit_vector():
@@ -138,26 +137,11 @@ def test_edge_direction_zero_vector():
     assert "zero magnitude" in str(exc_info.value).lower()
 
 
-def _gpu_available() -> bool:
-    try:
-        import cupy as cp  # noqa: F401
-        import cupy
-
-        return cupy.cuda.runtime.getDeviceCount() > 0
-    except Exception:
-        return False
-
-
-def gpu_test(fn):
-    return pytest.mark.gpu(
-        pytest.mark.skipif(not _gpu_available(), reason="GPU not available for CuPy.")(
-            fn
-        )
-    )
-
-
-@gpu_test
+@pytest.mark.gpu
 def test_edge_cpu_vs_gpu_identical_direction() -> None:
+    # Import locally to avoid sticky global backend state between tests
+    import purkinje_uv as puv
+
     nodes = [
         np.array([0.0, 0.0, 0.0]),
         np.array([1.0, 1.0, 1.0]),
@@ -174,8 +158,9 @@ def test_edge_cpu_vs_gpu_identical_direction() -> None:
     np.testing.assert_allclose(dir_gpu, dir_cpu, rtol=1e-12, atol=1e-12)
 
 
-@gpu_test
+@pytest.mark.gpu
 def test_edge_accepts_cupy_input_and_returns_numpy() -> None:
+    import purkinje_uv as puv
     import cupy as cp
 
     nodes_cp = [
