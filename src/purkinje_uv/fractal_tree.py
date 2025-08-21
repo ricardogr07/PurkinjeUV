@@ -637,8 +637,151 @@ class FractalTree:
         _LOGGER.info("Branching complete: new edges queued=%d", len(branching_queue))
         return branching_queue, branch_id
 
+    def _grow_generation(
+        self,
+        *,
+        edge_queue: list[int],
+        nodes: list[NDArray[np.float64]],
+        edges: list[Edge],
+        branches: DefaultDict[int, list[int]],
+        sister_branches: dict[int, int],
+        dx: float,
+        w: float,
+        branch_length: float,
+        end_nodes: list[int],
+    ) -> list[int]:
+        """Advance all current tips forward for a fixed arc-length (legacy-parity).
+
+        Returns the next `edge_queue` (tips that keep growing into the next phase).
+        """
+        n_steps = int(branch_length / dx)
+        _LOGGER.info("Growing generation: steps=%d, dx=%.6g, w=%.6g", n_steps, dx, w)
+
+        for step in range(n_steps):
+            growing_queue: list[int] = []
+
+            while edge_queue:
+                edge_id = edge_queue.pop(0)
+                edge = edges[edge_id]
+
+                pred = nodes[edge.n2]
+
+                # Vectorized distances to all nodes
+                all_dist = np.linalg.norm(np.asarray(nodes) - pred, axis=1)
+
+                # Exclude own branch nodes
+                b = edge.branch
+                if b is None:
+                    raise RuntimeError("Edge without branch id; invariant broken.")
+                all_dist[branches[b]] = 1e9  # large sentinel
+
+                # Exclude sister branch nodes (but keep a copy to restore below)
+                sis = sister_branches.get(b)
+                sis_vals = None
+                if sis is not None and sis in branches:
+                    sis_vals = all_dist[branches[sis]].copy()
+                    all_dist[branches[sis]] = 1e9
+
+                # Local scaling
+                s, _ = self._scaling(nodes[edge.n2])
+
+                # Collision rule (legacy): stop if too close to any excluded node
+                if float(all_dist.min()) < 0.9 * dx * s:
+                    end_nodes.append(edge.n2)
+                    _LOGGER.debug(
+                        "Grow stop: edge=%d tip=%d (collision threshold)",
+                        edge_id,
+                        edge.n2,
+                    )
+                    continue
+
+                # Restore sister distances to compute gradient direction
+                if sis is not None and sis in branches and sis_vals is not None:
+                    all_dist[branches[sis]] = sis_vals
+
+                # Gradient = away from nearest disallowed point
+                nearest_idx = int(np.argmin(all_dist))
+                grad_dist = (pred - nodes[nearest_idx]) / float(all_dist[nearest_idx])
+
+                # Direction update + step
+                new_dir = edge.dir / np.linalg.norm(edge.dir)
+                new_dir = new_dir + w * grad_dist
+                new_dir /= np.linalg.norm(new_dir)
+
+                new_node = nodes[edge.n2] + new_dir * dx * s
+
+                # Domain check (legacy via VTK)
+                if not self._point_in_mesh_vtk(new_node):
+                    end_nodes.append(edge.n2)
+                    _LOGGER.debug(
+                        "Grow stop: edge=%d tip=%d (outside domain)", edge_id, edge.n2
+                    )
+                    continue
+
+                # Commit node/edge
+                new_node_id = len(nodes)
+                nodes.append(new_node)
+                branches[b].append(new_node_id)
+
+                new_edge_id = len(edges)
+                edges.append(Edge(edge.n2, new_node_id, nodes, edge_id, b))
+                growing_queue.append(new_edge_id)
+
+                _LOGGER.debug(
+                    "Grow step %d/%d: edge=%d -> new_node_id=%d",
+                    step + 1,
+                    n_steps,
+                    edge_id,
+                    new_node_id,
+                )
+
+            # proceed with the newly created tips for the next step
+            edge_queue = growing_queue
+
+        _LOGGER.info("Growing complete: tips remaining=%d", len(edge_queue))
+        return edge_queue
+
+    def _finalize_outputs(
+        self,
+        *,
+        nodes: list[NDArray[np.float64]],
+        edges: list[Edge],
+        edge_queue: list[int],
+        end_nodes: list[int],
+    ) -> None:
+        """Finalize outputs (UV nodes, connectivity, end nodes, and XYZ mapping)."""
+        # Legacy: remaining tips in the queue become end nodes
+        if edge_queue:
+            end_nodes.extend([edges[e].n2 for e in edge_queue])
+
+        # Save UV-space results
+        self.uv_nodes = np.array(nodes, dtype=float)
+        self.edges = edges
+        self.end_nodes = end_nodes
+        self.connectivity = [[e.n1, e.n2] for e in edges]
+
+        _LOGGER.info(
+            "Finalize: UV nodes=%d, edges=%d, end_nodes=%d",
+            len(nodes),
+            len(edges),
+            len(end_nodes),
+        )
+
+        # Map UV -> XYZ by barycentric interpolation of original 3D verts (legacy)
+        self.nodes_xyz = []
+        for node_uv in nodes:
+            q3 = np.append(node_uv, 0.0)
+            f, _, _ = self._eval_field(q3, self.m.verts, self.mesh_uv)
+            self.nodes_xyz.append(f.astype(float))
+
+        _LOGGER.debug(
+            "Finalize: mapped %d UV nodes to XYZ (first=%s)",
+            len(self.nodes_xyz),
+            self.nodes_xyz[0].tolist() if self.nodes_xyz else "[]",
+        )
+
     def grow_tree(self) -> None:
-        """Generate the Purkinje fractal tree using the legacy UV algorithm."""
+        """Generate the Purkinje fractal tree."""
         (
             nodes,
             edges,
@@ -659,162 +802,54 @@ class FractalTree:
             nodes, edges, edge_queue, branches, dx, init_branch_length
         )
 
-        # --- fascicles (legacy, inline) ---
-        for fasc_len, fasc_ang in zip(
-            self.params.fascicles_length, self.params.fascicles_angles
-        ):
-            Rotation = np.array(
-                [
-                    [np.cos(fasc_ang), -np.sin(fasc_ang)],
-                    [np.sin(fasc_ang), np.cos(fasc_ang)],
-                ],
-                dtype=float,
-            )
+        branch_id = self._spawn_fascicles(
+            branching_edge_id=branching_edge_id,
+            nodes=nodes,
+            edges=edges,
+            edge_queue=edge_queue,
+            branches=branches,
+            branch_id=branch_id,
+            dx=dx,
+        )
 
-            edge = edges[branching_edge_id]
-            new_dir = Rotation @ edge.dir
-            new_dir /= np.linalg.norm(new_dir)
-
-            s, tri = self._scaling(nodes[edge.n2])
-            if tri < 0:
-                raise RuntimeError("the fascicle goes out of the domain")
-
-            new_node = nodes[edge.n2] + new_dir * dx * s
-            new_node_id = len(nodes)
-            nodes.append(new_node)
-
-            branch_id += 1
-            branches[branch_id].append(new_node_id)
-
-            # parent must be the trunk edge we are branching from
-            new_edge_id = len(edges)
-            edges.append(
-                Edge(
-                    edge.n2,
-                    new_node_id,
-                    nodes,
-                    parent=branching_edge_id,
-                    branch=branch_id,
-                )
-            )
-            edge_queue.append(new_edge_id)
-
-            for _ in range(int(fasc_len / dx)):
-                edge_id = edge_queue.pop(0)
-                edge = edges[edge_id]
-
-                new_dir = edge.dir / np.linalg.norm(edge.dir)
-                s, tri = self._scaling(nodes[edge.n2])
-                if tri < 0:
-                    raise RuntimeError("the fascicle goes out of the domain")
-
-                new_node = nodes[edge.n2] + new_dir * dx * s
-                new_node_id = len(nodes)
-                nodes.append(new_node)
-
-                b = edge.branch
-                if b is None:
-                    raise RuntimeError(
-                        "Edge has no branch id (internal invariant violated)."
-                    )
-                branches[b].append(new_node_id)
-
-                edge_queue.append(len(edges))
-                edges.append(Edge(edge.n2, new_node_id, nodes, edge_id, b))
-
-        # --- generations (legacy) ---
         for gen in range(int(self.params.N_it)):
-            print("generation", gen)
-            # Branching step
-            branching_queue: List[int] = []
-            while edge_queue:
-                edge_id = edge_queue.pop(0)
-                edge = edges[edge_id]
-                for R in (Rplus, Rminus):
-                    new_dir = R @ edge.dir
-                    new_dir /= np.linalg.norm(new_dir)
-                    s, _ = self._scaling(nodes[edge.n2])
-                    new_node = nodes[edge.n2] + new_dir * dx * s
-                    if not self._point_in_mesh_vtk(new_node):
-                        end_nodes.append(edge.n2)
-                        continue
-                    new_node_id = len(nodes)
-                    nodes.append(new_node)
-                    branching_queue.append(len(edges))
-                    branch_id += 1
-                    branches[branch_id].append(new_node_id)
-                    edges.append(Edge(edge.n2, new_node_id, nodes, edge_id, branch_id))
-                sister_branches[branch_id - 1] = branch_id
-                sister_branches[branch_id] = branch_id - 1
+            _LOGGER.info("Generation %d: branching phase", gen)
 
-            edge_queue = branching_queue
+            edge_queue, branch_id = self._branch_generation(
+                edge_queue=edge_queue,
+                nodes=nodes,
+                edges=edges,
+                branches=branches,
+                sister_branches=sister_branches,
+                Rplus=Rplus,
+                Rminus=Rminus,
+                dx=dx,
+                branch_id=branch_id,
+                end_nodes=end_nodes,
+            )
 
-            # Growing step
-            for _ in range(int(branch_length / dx)):
-                growing_queue: List[int] = []
-                new_nodes_batch: List[NDArray[np.float64]] = []
+            _LOGGER.info("Generation %d: growing phase", gen)
+            edge_queue = self._grow_generation(
+                edge_queue=edge_queue,
+                nodes=nodes,
+                edges=edges,
+                branches=branches,
+                sister_branches=sister_branches,
+                dx=dx,
+                w=w,
+                branch_length=branch_length,
+                end_nodes=end_nodes,
+            )
 
-                while edge_queue:
-                    edge_id = edge_queue.pop(0)
-                    edge = edges[edge_id]
-
-                    pred = nodes[edge.n2]
-                    # vectorized "collision" distances, excluding own branch & sister
-                    all_dist = np.linalg.norm(nodes - pred, axis=1)
-                    all_dist[branches[edge.branch]] = 1e9  # type: ignore[index]
-                    sister = sister_branches[edge.branch]  # type: ignore[index]
-                    sister_vals = all_dist[branches[sister]]
-                    all_dist[branches[sister]] = 1e9
-
-                    s, _ = self._scaling(nodes[edge.n2])
-                    if all_dist.min() < 0.9 * dx * s:
-                        end_nodes.append(edge.n2)
-                        continue
-
-                    # gradient = direction away from nearest disallowed point
-                    all_dist[branches[sister]] = sister_vals  # restore sister
-                    nearest_idx = int(np.argmin(all_dist))
-                    grad_dist = (pred - nodes[nearest_idx]) / float(
-                        all_dist[nearest_idx]
-                    )
-
-                    new_dir = edge.dir + w * grad_dist
-                    new_dir /= np.linalg.norm(new_dir)
-                    new_node = nodes[edge.n2] + new_dir * dx * s
-                    if not self._point_in_mesh_vtk(new_node):
-                        end_nodes.append(edge.n2)
-                        continue
-
-                    new_node_id = len(nodes)
-                    nodes.append(new_node)
-                    new_nodes_batch.append(new_node)
-                    growing_queue.append(len(edges))
-                    branches[edge.branch].append(new_node_id)  # type: ignore[index]
-                    edges.append(
-                        Edge(edge.n2, new_node_id, nodes, edge_id, edge.branch)
-                    )
-
-                edge_queue = growing_queue
-
-        end_nodes += [edges[e].n2 for e in edge_queue]
-
-        self.uv_nodes = np.array(nodes, dtype=float)
-        self.edges = edges
-        self.end_nodes = end_nodes
-        self.connectivity = [[e.n1, e.n2] for e in edges]
-
-        # Map UV -> XYZ by barycentric interpolation of original 3D verts (legacy)
-        self.nodes_xyz = []
-        for node_uv in nodes:
-            q3 = np.append(node_uv, 0.0)
-            f, _, _ = self._eval_field(q3, self.m.verts, self.mesh_uv)
-            self.nodes_xyz.append(f.astype(float))
+        self._finalize_outputs(
+            nodes=nodes,
+            edges=edges,
+            edge_queue=edge_queue,
+            end_nodes=end_nodes,
+        )
 
     def save(self, filename: str) -> None:
-        """Write the generated line mesh to a VTU file.
-
-        Ensures data are on CPU/NumPy, validates shapes, and logs summary stats.
-        """
+        """Write the generated line mesh to a VTU file."""
         # Basic emptiness checks
         if not self.nodes_xyz or not self.connectivity:
             _LOGGER.error(
