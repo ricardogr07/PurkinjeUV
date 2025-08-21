@@ -6,7 +6,7 @@ embedded in a 3D mesh.
 """
 
 import logging
-from typing import Any, List, Tuple
+from typing import DefaultDict, Dict, Any, List, Tuple
 import numpy as np
 import pyvista as pv
 import vtk
@@ -311,40 +311,56 @@ class FractalTree:
         )
         return s, tri
 
-    def grow_tree(self) -> None:
-        """Generate the Purkinje fractal tree using the legacy UV algorithm."""
-        branches: dict[int, list[int]] = defaultdict(list)
-        branch_id = 0
-        end_nodes: list[int] = []
-        sister_branches: dict[int, int] = {}
-
+    def _init_state(
+        self,
+    ) -> Tuple[
+        List[NDArray[np.float64]],  # nodes
+        List[Edge],  # edges
+        List[int],  # edge_queue
+        DefaultDict[int, List[int]],  # branches
+        Dict[int, int],  # sister_branches
+        List[int],  # end_nodes
+        int,  # branch_id
+        NDArray[np.float64],  # Rplus (2x2)
+        NDArray[np.float64],  # Rminus (2x2)
+        float,  # dx
+        float,  # w
+        float,  # branch_length
+        float,  # init_branch_length
+    ]:
+        """Build the initial in-UV state for tree growth."""
+        # Parameters
         dx = float(self.params.l_segment)
+        branch_length = float(self.params.length)
+        init_branch_length = float(self.params.init_length)
+        theta = float(self.params.branch_angle)
+        w = float(self.params.w)
 
         # Initial 2D UV nodes and direction
         init_node = self.mesh_uv.verts[self.params.init_node_id][:2]
         second_node = self.mesh_uv.verts[self.params.second_node_id][:2]
+
         s0, tri0 = self._scaling(init_node)
         if tri0 < 0:
-            raise RuntimeError("the initial node is outside the domain")
+            raise RuntimeError("The initial node is outside the domain")
 
         init_dir = second_node - init_node
         init_dir /= np.linalg.norm(init_dir)
 
         nodes: List[NDArray[np.float64]] = [
-            init_node.astype(float),
-            (init_node + dx * init_dir * s0).astype(float),
+            np.asarray(init_node, dtype=float),
+            np.asarray(init_node + dx * init_dir * s0, dtype=float),
         ]
+
+        branch_id = 0
         edges: List[Edge] = [Edge(0, 1, nodes, None, branch_id)]
-
         edge_queue: List[int] = [0]
-        branches[branch_id].append(0)
+        branches: DefaultDict[int, List[int]] = defaultdict(list)
+        branches[branch_id].append(0)  # match legacy: seed with node 0
+        sister_branches: Dict[int, int] = {}
+        end_nodes: List[int] = []
 
-        branch_length = float(self.params.length)
-        init_branch_length = float(self.params.init_length)
-
-        theta = float(self.params.branch_angle)
-        w = float(self.params.w)
-
+        # Rotation matrices
         Rplus = np.array(
             [[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]],
             dtype=float,
@@ -354,24 +370,296 @@ class FractalTree:
             dtype=float,
         )
 
-        # --- grow initial trunk (legacy) ---
-        for _ in range(int(init_branch_length / dx)):
+        return (
+            nodes,
+            edges,
+            edge_queue,
+            branches,
+            sister_branches,
+            end_nodes,
+            branch_id,
+            Rplus,
+            Rminus,
+            dx,
+            w,
+            branch_length,
+            init_branch_length,
+        )
+
+    def _grow_initial_trunk(
+        self,
+        nodes: List[NDArray[np.float64]],
+        edges: List[Edge],
+        edge_queue: List[int],
+        branches: DefaultDict[int, List[int]],
+        dx: float,
+        init_branch_length: float,
+    ) -> int:
+        """Grow the straight initial trunk for a fixed arc-length.
+
+        Keeps legacy semantics exactly:
+        - Pops from the front of `edge_queue`
+        - Uses the edge's direction (normalized)
+        - Scales the step by local sqrt(uv-scaling)
+        - Appends new node/edge and pushes new edge index to the queue
+        - Raises if the trunk exits the domain
+
+        Returns:
+            The edge id to branch from next (i.e., the first item remaining in the queue).
+        """
+        n_steps = int(init_branch_length / dx)
+        _LOGGER.info("Growing initial trunk: steps=%d, dx=%.6g", n_steps, dx)
+
+        for step in range(n_steps):
+            if not edge_queue:
+                raise RuntimeError(
+                    "Initial trunk: empty edge queue before completing steps."
+                )
+
             edge_id = edge_queue.pop(0)
             edge = edges[edge_id]
+
+            # Move forward along the current edge direction
             new_dir = edge.dir / np.linalg.norm(edge.dir)
             s, tri = self._scaling(nodes[edge.n2])
             if tri < 0:
-                raise RuntimeError("the initial branch goes out of the domain")
+                raise RuntimeError("The initial branch goes out of the domain")
+
             new_node = nodes[edge.n2] + new_dir * dx * s
             new_node_id = len(nodes)
             nodes.append(new_node)
-            branches[edge.branch].append(new_node_id)  # type: ignore[index]
-            edge_queue.append(len(edges))
+
+            # Keep per-branch node list identical to legacy behavior
+            b = edge.branch
+            if b is None:
+                raise RuntimeError(
+                    "Edge has no branch id (internal invariant violated)."
+                )
+            branches[b].append(new_node_id)
+
+            # Add new edge from the previous tip to the new node
+            next_edge_id = len(edges)
             edges.append(Edge(edge.n2, new_node_id, nodes, edge_id, edge.branch))
+            edge_queue.append(next_edge_id)
 
+            _LOGGER.debug(
+                "Trunk step %d/%d: edge=%d -> new_node_id=%d tri=%d s=%.6g",
+                step + 1,
+                n_steps,
+                edge_id,
+                new_node_id,
+                tri,
+                s,
+            )
+
+        if not edge_queue:
+            raise RuntimeError("Initial trunk grown but queue is empty; cannot branch.")
         branching_edge_id = edge_queue.pop(0)
+        _LOGGER.info("Initial trunk complete; branching_edge_id=%d", branching_edge_id)
+        return branching_edge_id
 
-        # --- fascicles (legacy) ---
+    def _spawn_fascicles(
+        self,
+        branching_edge_id: int,
+        nodes: list[NDArray[np.float64]],
+        edges: list[Edge],
+        edge_queue: list[int],
+        branches: DefaultDict[int, list[int]],
+        branch_id: int,
+        dx: float,
+    ) -> int:
+        """Spawn and grow initial fascicles off the branching edge (legacy-parity).
+
+        Mutates `nodes`, `edges`, `edge_queue`, `branches` in-place and returns the
+        updated `branch_id`.
+        """
+        for fasc_len, fasc_ang in zip(
+            self.params.fascicles_length, self.params.fascicles_angles
+        ):
+            # Rotation for the initial fascicle direction
+            c = float(np.cos(fasc_ang))
+            s = float(np.sin(fasc_ang))
+            rotation = np.array([[c, -s], [s, c]], dtype=float)
+
+            base_edge = edges[branching_edge_id]
+            new_dir = rotation @ base_edge.dir
+            new_dir /= np.linalg.norm(new_dir)
+
+            scale, tri = self._scaling(nodes[base_edge.n2])
+            if tri < 0:
+                raise RuntimeError("the fascicle goes out of the domain")
+
+            # First node of this fascicle
+            new_node = nodes[base_edge.n2] + new_dir * dx * scale
+            new_node_id = len(nodes)
+            nodes.append(new_node)
+
+            branch_id += 1
+            branches[branch_id].append(new_node_id)
+
+            new_edge_id = len(edges)
+            edges.append(
+                Edge(
+                    base_edge.n2,
+                    new_node_id,
+                    nodes,
+                    parent=branching_edge_id,
+                    branch=branch_id,
+                )
+            )
+            edge_queue.append(new_edge_id)
+
+            n_steps = int(fasc_len / dx)
+            _LOGGER.info(
+                "Fascicle: angle=%.6g, length=%.6g, steps=%d (parent_edge=%d, branch=%d)",
+                fasc_ang,
+                fasc_len,
+                n_steps,
+                branching_edge_id,
+                branch_id,
+            )
+
+            # Grow along edge queue (legacy FIFO behavior)
+            for step in range(n_steps):
+                edge_id = edge_queue.pop(0)
+                edge = edges[edge_id]
+
+                step_dir = edge.dir / np.linalg.norm(edge.dir)
+                scale_step, tri_step = self._scaling(nodes[edge.n2])
+                if tri_step < 0:
+                    raise RuntimeError("the fascicle goes out of the domain")
+
+                nxt_node = nodes[edge.n2] + step_dir * dx * scale_step
+                nxt_node_id = len(nodes)
+                nodes.append(nxt_node)
+
+                b = edge.branch
+                if b is None:
+                    raise RuntimeError(
+                        "Edge has no branch id (internal invariant violated)."
+                    )
+                branches[b].append(nxt_node_id)
+
+                nxt_edge_id = len(edges)
+                edges.append(Edge(edge.n2, nxt_node_id, nodes, edge_id, b))
+                edge_queue.append(nxt_edge_id)
+
+                _LOGGER.debug(
+                    "Fascicle step %d/%d: edge=%d -> new_node_id=%d (tri=%d, s=%.6g)",
+                    step + 1,
+                    n_steps,
+                    edge_id,
+                    nxt_node_id,
+                    tri_step,
+                    scale_step,
+                )
+
+        return branch_id
+
+    def _branch_generation(
+        self,
+        edge_queue: list[int],
+        nodes: list[NDArray[np.float64]],
+        edges: list[Edge],
+        branches: DefaultDict[int, list[int]],
+        sister_branches: dict[int, int],
+        Rplus: NDArray[np.float64],
+        Rminus: NDArray[np.float64],
+        dx: float,
+        branch_id: int,
+        end_nodes: list[int],
+    ) -> tuple[list[int], int]:
+        """Create left/right children for every edge in the queue (legacy-parity).
+
+        Pops all items from `edge_queue` and returns the new queue with the
+        just-created edges (branching_queue). Updates `branch_id`, `branches`,
+        `sister_branches`, and `end_nodes` in-place to match the legacy behavior.
+        """
+        branching_queue: list[int] = []
+        rotations = (Rplus, Rminus)
+
+        _LOGGER.info("Branching generation: #parents=%d", len(edge_queue))
+
+        while edge_queue:
+            edge_id = edge_queue.pop(0)
+            base_edge = edges[edge_id]
+
+            # Produce two children (Rplus, Rminus)
+            for R in rotations:
+                new_dir = R @ base_edge.dir
+                new_dir /= np.linalg.norm(new_dir)
+
+                scale, _ = self._scaling(nodes[base_edge.n2])
+                new_node = nodes[base_edge.n2] + new_dir * dx * scale
+
+                # Legacy domain check: if outside, terminate this parent tip
+                if not self._point_in_mesh_vtk(new_node):
+                    end_nodes.append(base_edge.n2)
+                    _LOGGER.debug(
+                        "Branching: parent_edge=%d -> outside domain; end node=%d",
+                        edge_id,
+                        base_edge.n2,
+                    )
+                    continue
+
+                new_node_id = len(nodes)
+                nodes.append(new_node)
+
+                branch_id += 1
+                branches[branch_id].append(new_node_id)
+
+                new_edge_id = len(edges)
+                edges.append(
+                    Edge(
+                        base_edge.n2,
+                        new_node_id,
+                        nodes,
+                        parent=edge_id,
+                        branch=branch_id,
+                    )
+                )
+                branching_queue.append(new_edge_id)
+
+                _LOGGER.debug(
+                    "Branching: parent_edge=%d -> child_edge=%d branch=%d node=%d",
+                    edge_id,
+                    new_edge_id,
+                    branch_id,
+                    new_node_id,
+                )
+
+            # LEGACY MAPPING: pair the *last* two branch IDs as sisters,
+            # regardless of whether two children were actually created.
+            # (This mirrors the original code exactly.)
+            sister_branches[branch_id - 1] = branch_id
+            sister_branches[branch_id] = branch_id - 1
+
+        _LOGGER.info("Branching complete: new edges queued=%d", len(branching_queue))
+        return branching_queue, branch_id
+
+    def grow_tree(self) -> None:
+        """Generate the Purkinje fractal tree using the legacy UV algorithm."""
+        (
+            nodes,
+            edges,
+            edge_queue,
+            branches,
+            sister_branches,
+            end_nodes,
+            branch_id,
+            Rplus,
+            Rminus,
+            dx,
+            w,
+            branch_length,
+            init_branch_length,
+        ) = self._init_state()
+
+        branching_edge_id = self._grow_initial_trunk(
+            nodes, edges, edge_queue, branches, dx, init_branch_length
+        )
+
+        # --- fascicles (legacy, inline) ---
         for fasc_len, fasc_ang in zip(
             self.params.fascicles_length, self.params.fascicles_angles
         ):
@@ -382,34 +670,57 @@ class FractalTree:
                 ],
                 dtype=float,
             )
+
             edge = edges[branching_edge_id]
             new_dir = Rotation @ edge.dir
             new_dir /= np.linalg.norm(new_dir)
+
             s, tri = self._scaling(nodes[edge.n2])
             if tri < 0:
                 raise RuntimeError("the fascicle goes out of the domain")
+
             new_node = nodes[edge.n2] + new_dir * dx * s
             new_node_id = len(nodes)
             nodes.append(new_node)
+
             branch_id += 1
             branches[branch_id].append(new_node_id)
-            edge_queue.append(len(edges))
+
+            # parent must be the trunk edge we are branching from
+            new_edge_id = len(edges)
             edges.append(
-                Edge(edge.n2, new_node_id, nodes, parent=edge_id, branch=branch_id)
+                Edge(
+                    edge.n2,
+                    new_node_id,
+                    nodes,
+                    parent=branching_edge_id,
+                    branch=branch_id,
+                )
             )
+            edge_queue.append(new_edge_id)
+
             for _ in range(int(fasc_len / dx)):
                 edge_id = edge_queue.pop(0)
                 edge = edges[edge_id]
+
                 new_dir = edge.dir / np.linalg.norm(edge.dir)
                 s, tri = self._scaling(nodes[edge.n2])
                 if tri < 0:
                     raise RuntimeError("the fascicle goes out of the domain")
+
                 new_node = nodes[edge.n2] + new_dir * dx * s
                 new_node_id = len(nodes)
                 nodes.append(new_node)
-                branches[edge.branch].append(new_node_id)  # type: ignore[index]
+
+                b = edge.branch
+                if b is None:
+                    raise RuntimeError(
+                        "Edge has no branch id (internal invariant violated)."
+                    )
+                branches[b].append(new_node_id)
+
                 edge_queue.append(len(edges))
-                edges.append(Edge(edge.n2, new_node_id, nodes, edge_id, edge.branch))
+                edges.append(Edge(edge.n2, new_node_id, nodes, edge_id, b))
 
         # --- generations (legacy) ---
         for gen in range(int(self.params.N_it)):
