@@ -5,21 +5,21 @@ collision detection, and iterative branching to create a tree structure
 embedded in a 3D mesh.
 """
 
-from __future__ import annotations
-
-from collections import defaultdict
+import logging
 from typing import Any, List, Tuple
-
 import numpy as np
 import pyvista as pv
 import vtk
 from numpy.typing import NDArray
-
 import meshio
+from collections import defaultdict
 
 from .mesh import Mesh
 from .edge import Edge
 from .fractal_tree_parameters import FractalTreeParameters
+from .config import backend_name, to_cpu
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class FractalTree:
@@ -31,49 +31,106 @@ class FractalTree:
     """
 
     def __init__(self, params: FractalTreeParameters) -> None:
-        self.params = params
+        """Initialize the fractal tree generator.
 
-        # Load 3D mesh & compute UV + UV-scaling (like legacy)
+        This:
+        - loads the 3D mesh and computes UV + UV-scaling (via :class:`Mesh`),
+        - builds a “flattened UV” mesh (z=0) with the same connectivity,
+        - constructs a VTK cell locator over the flattened mesh for closest-point queries,
+        - precomputes a node-wise scaling proxy (area-weighted from triangle metrics).
+
+        Args:
+            params: Tree growth parameters (mesh file, growth lengths/angles, etc.).
+
+        Raises:
+            RuntimeError: If UV coordinates or UV-scaling are unavailable.
+            Exception: If building the VTK locator fails.
+        """
+        self.params = params
+        _LOGGER.info("FractalTree: initializing (backend=%s)", backend_name())
+
+        # Load 3D surface mesh and compute UV+scaling (Mesh handles GPU where possible)
         self.m = Mesh(params.meshfile)
-        print("computing uv map")
+        _LOGGER.debug("FractalTree: computing UV-scaling via Mesh...")
         self.m.compute_uvscaling()
 
-        # Build a "UV mesh" flattened on z=0 with same connectivity
+        if self.m.uv is None or self.m.uvscaling is None:
+            # Mesh.compute_uvscaling guarantees both; guard anyway.
+            _LOGGER.error("FractalTree: UV or UV-scaling not available.")
+            raise RuntimeError("UV coordinates / UV-scaling must be computed.")
 
-        assert self.m.uv is not None, "UV coordinates must be computed"
-        uv = np.asarray(self.m.uv, dtype=float)
-        zeros = np.zeros((uv.shape[0], 1), dtype=float)
-
-        uv3 = np.concatenate((uv, zeros), axis=1)
+        # Build a flattened UV mesh on z=0 with identical connectivity
+        uv = np.asarray(self.m.uv, dtype=float)  # (n_nodes, 2)
+        zeros = np.zeros((uv.shape[0], 1), dtype=float)  # (n_nodes, 1)
+        uv3 = np.concatenate((uv, zeros), axis=1)  # (n_nodes, 3)
         self.mesh_uv = Mesh(verts=uv3, connectivity=self.m.connectivity)
-
-        # Prepare a VTK locator over the flat UV surface (legacy approach)
-        mpv = pv.read(params.meshfile)
-        mpv.points = self.mesh_uv.verts  # overwrite points with flattened UV
-        self.loc = vtk.vtkCellLocator()
-        self.loc.SetDataSet(mpv)
-        self.loc.BuildLocator()
-
-        # Kept for parity with legacy (even if not used by current scaling)
-        self.scaling_nodes = np.array(
-            self.mesh_uv.tri2node_interpolation(self.m.uvscaling)
+        _LOGGER.debug(
+            "FractalTree: UV mesh created (nodes=%d, tris=%d).",
+            self.mesh_uv.verts.shape[0],
+            self.mesh_uv.connectivity.shape[0],
         )
 
-        # Outputs (filled in grow_tree)
+        # VTK locator over the flattened UV surface (CPU-side legacy behavior)
+        try:
+            mpv = pv.read(params.meshfile)
+            mpv.points = self.mesh_uv.verts  # overwrite with flattened UV points
+            self.loc = vtk.vtkCellLocator()
+            self.loc.SetDataSet(mpv)
+            self.loc.BuildLocator()
+            _LOGGER.debug("FractalTree: VTK cell locator built.")
+        except Exception:
+            _LOGGER.exception("FractalTree: failed to build VTK locator.")
+            raise
+
+        # Area-weighted node scaling proxy (kept for parity with legacy)
+        self.scaling_nodes = np.array(
+            self.mesh_uv.tri2node_interpolation(self.m.uvscaling), dtype=float
+        )
+        _LOGGER.debug(
+            "FractalTree: scaling_nodes computed (len=%d).", self.scaling_nodes.size
+        )
+
+        # Outputs populated by grow_tree()
         self.uv_nodes: NDArray[np.float64] | None = None
         self.nodes_xyz: List[NDArray[np.float64]] = []
         self.edges: List[Edge] = []
         self.end_nodes: List[int] = []
         self.connectivity: List[List[int]] = []
 
-    # ---------- self-contained legacy helpers ----------
-
     @staticmethod
-    def _interpolate(vectors: NDArray[Any], r: float, t: float) -> NDArray[np.float64]:
-        # barycentric: v = t*v2 + r*v1 + (1 - r - t)*v0
-        return (t * vectors[2] + r * vectors[1] + (1.0 - r - t) * vectors[0]).astype(
-            float
-        )
+    def _interpolate(
+        vectors: NDArray[Any],
+        r: float,
+        t: float,
+    ) -> NDArray[np.float64]:
+        """Barycentric interpolation over a triangle.
+
+        Given the values at the triangle's vertices ``vectors = [v0, v1, v2]``,
+        return ``t*v2 + r*v1 + (1 - r - t)*v0``. Works for scalar fields
+        (shape ``(3,)``) and vector/tensor fields (shape ``(3, k)``).
+
+        Args:
+            vectors: Values at the three triangle vertices (first dimension must be 3).
+            r: Barycentric coordinate associated with vertex 1.
+            t: Barycentric coordinate associated with vertex 2.
+
+        Returns:
+            Interpolated value as ``float64`` (shape ``()`` for scalars or ``(k,)`` for vectors).
+
+        Raises:
+            ValueError: If the leading dimension of ``vectors`` is not 3.
+        """
+        arr = np.asarray(vectors, dtype=float)
+        if arr.shape[0] != 3:
+            raise ValueError(
+                f"_interpolate expects 'vectors' with leading dimension 3; got shape {arr.shape}"
+            )
+
+        w0 = 1.0 - r - t  # weight for v0
+
+        v0, v1, v2 = arr[0], arr[1], arr[2]
+        out = t * v2 + r * v1 + w0 * v0
+        return np.asarray(out, dtype=float)
 
     def _eval_field(
         self,
@@ -81,45 +138,178 @@ class FractalTree:
         field: NDArray[Any],
         mesh: Mesh,
     ) -> Tuple[NDArray[np.float64], NDArray[np.float64], int]:
-        # project_new_point returns: ppoint, tri, r, t
-        ppoint, tri, r, t = mesh.project_new_point(point, 5)
-        val = self._interpolate(field[mesh.connectivity[tri]], float(r), float(t))
-        return val, ppoint.astype(float), int(tri)
+        """Project `point` onto `mesh`, then barycentrically interpolate `field`.
+
+        Args:
+            point: 2D/3D point in the same space as the mesh vertices
+                (CuPy or NumPy ok; will be converted to NumPy on CPU).
+            field: Per-vertex values to interpolate (shape (n_nodes, k) or (n_nodes,)).
+            mesh:  Mesh instance used for projection and connectivity.
+
+        Returns:
+            (value, projected_point, triangle_index)
+            - value: interpolated field at the projected point (float64; shape (k,) or scalar).
+            - projected_point: closest point on the surface in the same coords as `point`.
+            - triangle_index: index of the containing triangle (>= 0).
+
+        Raises:
+            ValueError: If the point projects outside the surface (no containing triangle).
+        """
+        # KD-tree is CPU-only; ensure NumPy float
+        p_cpu = np.asarray(to_cpu(point), dtype=float)
+
+        # project_new_point returns: (projected_point, tri, r, t)
+        ppoint, tri, r, t = mesh.project_new_point(p_cpu, verts_to_search=5)
+        tri_int = int(tri)
+
+        if tri_int < 0:
+            raise ValueError(
+                "_eval_field: point projects outside the mesh domain (tri=-1)."
+            )
+
+        # Convert field to NumPy and gather the triangle's 3 vertex values
+        field_cpu = np.asarray(to_cpu(field), dtype=float)
+        tri_conn = mesh.connectivity[tri_int]  # shape (3,)
+        vectors = field_cpu[tri_conn]  # shape (3,) or (3, k)
+
+        # Barycentric interpolation (r for v1, t for v2, (1-r-t) for v0)
+        val = self._interpolate(vectors, float(r), float(t)).astype(float, copy=False)
+
+        return val, np.asarray(ppoint, dtype=float), tri_int
 
     def _point_in_mesh(self, point: NDArray[Any], mesh: Mesh) -> bool:
-        q = np.append(point, 0.0)
-        _, tri, _, _ = mesh.project_new_point(q, 5)
-        return int(tri) >= 0
+        """Return True if `point` projects onto (i.e., is inside) `mesh`.
 
-    def _point_in_mesh_vtk(self, point: NDArray[Any]) -> bool:
-        q = np.append(point, 0.0)
-        cell_id = vtk.reference(0)
-        sub_id = vtk.reference(0)
-        dist = vtk.reference(0.0)
-        ppoint = np.zeros(3, dtype=float)
-        self.loc.FindClosestPoint(q, ppoint, cell_id, sub_id, dist)
-        return bool(dist.get() < 1e-9)
+        Accepts 2D (x,y) or 3D (x,y,z) points. If 2D is provided, a z=0
+        coordinate is appended for projection against a z=0 UV mesh.
+        """
+        # Normalize to CPU/NumPy and flatten
+        p = np.asarray(to_cpu(point), dtype=float).reshape(-1)
 
-    # ---------- legacy scaling that uses the locator ----------
-    def scaling(self, x: NDArray[Any]) -> Tuple[float, int]:
+        # Allow (x, y) by appending z=0 for UV meshes
+        if p.size == 2:
+            p3 = np.array([p[0], p[1], 0.0], dtype=float)
+        elif p.size == 3:
+            p3 = p
+        else:
+            raise ValueError(
+                f"_point_in_mesh: expected 2D or 3D point, got shape {p.shape}"
+            )
+
+        try:
+            # project_new_point returns (projected_point, tri, r, t)
+            _, tri, _, _ = mesh.project_new_point(p3, verts_to_search=5)
+            inside = int(tri) >= 0
+            _LOGGER.debug(
+                "_point_in_mesh: point=%s -> tri=%d inside=%s",
+                p3.tolist(),
+                int(tri),
+                inside,
+            )
+            return inside
+        except Exception:
+            _LOGGER.exception(
+                "_point_in_mesh: projection failed for point %s", p3.tolist()
+            )
+            return False
+
+    def _point_in_mesh_vtk(self, point: NDArray[Any], tol: float = 1e-9) -> bool:
+        """Return True if `point` lies on the UV-surface per the VTK locator.
+
+        Accepts 2D (x, y) or 3D (x, y, z) coordinates. For 2D inputs, z=0 is appended.
+        The VTK query is always performed on CPU. `tol` is a distance threshold in
+        world units (UV space) for considering the point "inside".
+        """
+        # Normalize to CPU/NumPy and flatten to 1D
+        p = np.asarray(to_cpu(point), dtype=float).reshape(-1)
+
+        if p.size == 2:
+            q = np.array([p[0], p[1], 0.0], dtype=float)
+        elif p.size == 3:
+            q = p.astype(float, copy=False)
+        else:
+            raise ValueError(
+                f"_point_in_mesh_vtk: expected 2D or 3D point, got shape {p.shape}"
+            )
+
+        if not hasattr(self, "loc") or self.loc is None:
+            _LOGGER.error("_point_in_mesh_vtk: VTK locator not initialized.")
+            return False
+
+        try:
+            cell_id = vtk.reference(0)
+            sub_id = vtk.reference(0)
+            dist = vtk.reference(0.0)
+            ppoint = np.zeros(3, dtype=float)
+
+            self.loc.FindClosestPoint(q, ppoint, cell_id, sub_id, dist)
+            d = float(dist.get())
+            inside = bool(d < tol)
+
+            _LOGGER.debug(
+                "_point_in_mesh_vtk: q=%s -> cell=%d sub=%d dist=%.3e tol=%.3e inside=%s",
+                q.tolist(),
+                int(cell_id.get()),
+                int(sub_id.get()),
+                d,
+                tol,
+                inside,
+            )
+            return inside
+        except Exception:
+            _LOGGER.exception(
+                "_point_in_mesh_vtk: VTK query failed for point %s", q.tolist()
+            )
+            return False
+
+    def _scaling(self, x: NDArray[Any], tol: float = 1e-3) -> Tuple[float, int]:
         """Return (sqrt(uv-scaling), triangle id) at a UV point.
 
         The triangle id is -1 when the closest point is farther than the distance
         threshold used by the VTK locator.
         """
-        q = np.append(x, 0.0)
+        # Normalize input (accept CuPy/NumPy; 2D or 3D)
+        p = np.asarray(to_cpu(x), dtype=float).reshape(-1)
+        if p.size == 2:
+            q = np.array([p[0], p[1], 0.0], dtype=float)
+        elif p.size == 3:
+            q = p
+        else:
+            raise ValueError(f"scaling: expected 2D or 3D point, got shape {p.shape}")
+
+        if not hasattr(self, "loc") or self.loc is None:
+            raise RuntimeError("Scaling: VTK locator not initialized.")
+
+        # VTK closest-point query (CPU)
         cell_id = vtk.reference(0)
         sub_id = vtk.reference(0)
         dist = vtk.reference(0.0)
         ppoint = np.zeros(3, dtype=float)
         self.loc.FindClosestPoint(q, ppoint, cell_id, sub_id, dist)
-        if dist.get() > 1e-3:
-            tri = -1
-        else:
-            tri = int(cell_id.get())
-        assert self.m.uvscaling is not None, "UV scaling must be computed"
-        s = float(np.sqrt(self.m.uvscaling[int(tri)]))
-        return s, int(tri)
+
+        d = float(dist.get())
+        tri = int(cell_id.get()) if d <= tol else -1
+
+        # UV scaling must be available (computed by Mesh.compute_uvscaling())
+        if self.m.uvscaling is None:
+            raise RuntimeError("scaling: UV scaling not computed.")
+
+        # Legacy behavior: if tri == -1, index with -1 (last triangle)
+        tri_idx = tri if tri >= 0 else -1
+        raw = float(self.m.uvscaling[tri_idx])
+        s = float(np.sqrt(max(raw, 0.0)))  # guard against tiny negative roundoff
+
+        _LOGGER.debug(
+            "Scaling: q=%s -> dist=%.3e tol=%.3e tri=%d used_idx=%d uvscale=%.6g s=%.6g",
+            q.tolist(),
+            d,
+            tol,
+            tri,
+            tri_idx,
+            raw,
+            s,
+        )
+        return s, tri
 
     def grow_tree(self) -> None:
         """Generate the Purkinje fractal tree using the legacy UV algorithm."""
@@ -133,7 +323,7 @@ class FractalTree:
         # Initial 2D UV nodes and direction
         init_node = self.mesh_uv.verts[self.params.init_node_id][:2]
         second_node = self.mesh_uv.verts[self.params.second_node_id][:2]
-        s0, tri0 = self.scaling(init_node)
+        s0, tri0 = self._scaling(init_node)
         if tri0 < 0:
             raise RuntimeError("the initial node is outside the domain")
 
@@ -169,7 +359,7 @@ class FractalTree:
             edge_id = edge_queue.pop(0)
             edge = edges[edge_id]
             new_dir = edge.dir / np.linalg.norm(edge.dir)
-            s, tri = self.scaling(nodes[edge.n2])
+            s, tri = self._scaling(nodes[edge.n2])
             if tri < 0:
                 raise RuntimeError("the initial branch goes out of the domain")
             new_node = nodes[edge.n2] + new_dir * dx * s
@@ -195,7 +385,7 @@ class FractalTree:
             edge = edges[branching_edge_id]
             new_dir = Rotation @ edge.dir
             new_dir /= np.linalg.norm(new_dir)
-            s, tri = self.scaling(nodes[edge.n2])
+            s, tri = self._scaling(nodes[edge.n2])
             if tri < 0:
                 raise RuntimeError("the fascicle goes out of the domain")
             new_node = nodes[edge.n2] + new_dir * dx * s
@@ -211,7 +401,7 @@ class FractalTree:
                 edge_id = edge_queue.pop(0)
                 edge = edges[edge_id]
                 new_dir = edge.dir / np.linalg.norm(edge.dir)
-                s, tri = self.scaling(nodes[edge.n2])
+                s, tri = self._scaling(nodes[edge.n2])
                 if tri < 0:
                     raise RuntimeError("the fascicle goes out of the domain")
                 new_node = nodes[edge.n2] + new_dir * dx * s
@@ -232,7 +422,7 @@ class FractalTree:
                 for R in (Rplus, Rminus):
                     new_dir = R @ edge.dir
                     new_dir /= np.linalg.norm(new_dir)
-                    s, _ = self.scaling(nodes[edge.n2])
+                    s, _ = self._scaling(nodes[edge.n2])
                     new_node = nodes[edge.n2] + new_dir * dx * s
                     if not self._point_in_mesh_vtk(new_node):
                         end_nodes.append(edge.n2)
@@ -265,7 +455,7 @@ class FractalTree:
                     sister_vals = all_dist[branches[sister]]
                     all_dist[branches[sister]] = 1e9
 
-                    s, _ = self.scaling(nodes[edge.n2])
+                    s, _ = self._scaling(nodes[edge.n2])
                     if all_dist.min() < 0.9 * dx * s:
                         end_nodes.append(edge.n2)
                         continue
@@ -310,9 +500,41 @@ class FractalTree:
             self.nodes_xyz.append(f.astype(float))
 
     def save(self, filename: str) -> None:
-        """Write the generated line mesh to a VTU file."""
-        line = meshio.Mesh(
-            np.array(self.nodes_xyz, dtype=float),
-            [("line", np.array(self.connectivity, dtype=int))],
-        )
-        line.write(filename)
+        """Write the generated line mesh to a VTU file.
+
+        Ensures data are on CPU/NumPy, validates shapes, and logs summary stats.
+        """
+        # Basic emptiness checks
+        if not self.nodes_xyz or not self.connectivity:
+            _LOGGER.error(
+                "save: empty tree (nodes=%d, segments=%d).",
+                len(self.nodes_xyz),
+                len(self.connectivity),
+            )
+            raise ValueError("Cannot save: no nodes or connectivity in the tree.")
+
+        # Normalize to CPU/NumPy
+        pts = np.asarray(to_cpu(self.nodes_xyz), dtype=float)
+        con = np.asarray(to_cpu(self.connectivity), dtype=int)
+
+        # Validate shapes
+        if pts.ndim != 2 or pts.shape[1] != 3:
+            raise ValueError(f"save: nodes_xyz must be (N, 3); got shape {pts.shape}.")
+        if con.ndim != 2 or con.shape[1] != 2:
+            raise ValueError(
+                f"save: connectivity must be (M, 2) line segments; got shape {con.shape}."
+            )
+
+        # Build and write VTU
+        try:
+            m = meshio.Mesh(points=pts, cells=[("line", con)])
+            m.write(filename)
+            _LOGGER.info(
+                "save: wrote VTU '%s' (nodes=%d, segments=%d).",
+                filename,
+                pts.shape[0],
+                con.shape[0],
+            )
+        except Exception:
+            _LOGGER.exception("save: failed to write '%s'.", filename)
+            raise
