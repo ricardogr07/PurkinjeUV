@@ -4,8 +4,11 @@ This test suite verifies that the Edge class correctly initializes
 its attributes and computes a normalized direction vector between
 two nodes in 3D space.
 """
+from __future__ import annotations
+
 import numpy as np
 import pytest
+
 from purkinje_uv.edge import Edge
 
 
@@ -132,3 +135,41 @@ def test_edge_direction_zero_vector():
 
     # Check the error message matches expected
     assert "zero magnitude" in str(exc_info.value).lower()
+
+
+@pytest.mark.gpu
+def test_edge_cpu_vs_gpu_identical_direction() -> None:
+    # Import locally to avoid sticky global backend state between tests
+    import purkinje_uv as puv
+
+    nodes = [
+        np.array([0.0, 0.0, 0.0]),
+        np.array([1.0, 1.0, 1.0]),
+    ]
+
+    with puv.use("cpu", seed=0):
+        edge_cpu = Edge(0, 1, nodes, parent=None, branch=None)
+        dir_cpu = edge_cpu.dir.copy()
+
+    with puv.use("gpu", seed=0, strict=True):
+        edge_gpu = Edge(0, 1, nodes, parent=None, branch=None)
+        dir_gpu = edge_gpu.dir.copy()
+
+    np.testing.assert_allclose(dir_gpu, dir_cpu, rtol=1e-12, atol=1e-12)
+
+
+@pytest.mark.gpu
+def test_edge_accepts_cupy_input_and_returns_numpy() -> None:
+    import purkinje_uv as puv
+    import cupy as cp
+
+    nodes_cp = [
+        cp.asarray([0.0, 0.0, 0.0]),
+        cp.asarray([2.0, 0.0, 0.0]),
+    ]
+
+    with puv.use("gpu", seed=0, strict=True):
+        edge = Edge(0, 1, nodes_cp, parent=None, branch=None)
+
+    assert isinstance(edge.dir, np.ndarray)
+    np.testing.assert_allclose(edge.dir, np.array([1.0, 0.0, 0.0]), rtol=0, atol=0)

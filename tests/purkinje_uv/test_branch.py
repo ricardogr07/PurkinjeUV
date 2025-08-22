@@ -5,10 +5,11 @@ including direction initialization, segment-wise projection, and
 integration with the Nodes manager.
 
 """
-
 import numpy as np
-from purkinje_uv.branch import Branch
+import pytest
 from unittest.mock import Mock
+
+from purkinje_uv.branch import Branch
 
 
 def test_branch_growth_success_three_segments():
@@ -306,7 +307,7 @@ def test_add_node_to_queue_success():
 
     # Add a new projected node
     success = branch.add_node_to_queue(
-        mesh=mock_mesh, init_node=branch.queue[0], dir=np.array([1.0, 1.0, 1.0])
+        mesh=mock_mesh, init_node=branch.queue[0], dir_vec=np.array([1.0, 1.0, 1.0])
     )
 
     # Expect success and one new entry in both queue and triangles
@@ -359,10 +360,94 @@ def test_add_node_to_queue_failure():
 
     # Attempt to add a node, expecting failure
     success = branch.add_node_to_queue(
-        mesh=mock_mesh, init_node=branch.queue[0], dir=np.array([1.0, 1.0, 1.0])
+        mesh=mock_mesh, init_node=branch.queue[0], dir_vec=np.array([1.0, 1.0, 1.0])
     )
 
     # Expect nothing added and return value = False
     assert success is False
     assert len(branch.queue) == 1  # only the original point
     assert len(branch.triangles) == 1  # only the initial triangle
+
+
+@pytest.mark.gpu
+def test_branch_cpu_vs_gpu_identical_results(puv_cpu, puv_gpu) -> None:
+    """CPU and GPU Branch growth should produce identical results within tolerance."""
+    # Shared mocks (deterministic)
+    mock_mesh = Mock()
+    mock_mesh.normals = np.tile(np.array([[0.0, 0.0, 1.0]]), (10, 1))
+    mock_mesh.project_new_point.side_effect = lambda pt: (pt, 0, None)
+
+    mock_nodes = Mock()
+    mock_nodes.nodes = [np.array([0.0, 0.0, 0.0])] * 10
+    mock_nodes.gradient.return_value = np.array([0.0, 1.0, 0.0])
+    mock_nodes.collision.return_value = ("ok", 1.0)
+    mock_nodes.add_nodes.side_effect = lambda pts: list(range(1, len(pts) + 1))
+    mock_nodes.update_collision_tree.return_value = None
+    mock_nodes.end_nodes = []
+
+    kwargs = dict(
+        mesh=mock_mesh,
+        init_node=0,
+        init_dir=np.array([1.0, 0.0, 0.0]),
+        init_tri=0,
+        length=1.0,
+        angle=np.pi / 3,  # 60 degrees
+        w=0.25,
+        nodes=mock_nodes,
+        brother_nodes=[],
+        Nsegments=4,
+    )
+
+    # Run on CPU
+    with puv_cpu.use("cpu", seed=0):
+        b_cpu = Branch(**kwargs)
+
+    # Run on GPU
+    with puv_gpu.use("gpu", seed=0, strict=True):
+        b_gpu = Branch(**kwargs)
+
+    # Compare final direction and triangles
+    np.testing.assert_allclose(b_cpu.dir, b_gpu.dir, rtol=1e-6, atol=1e-8)
+    assert b_cpu.triangles == b_gpu.triangles
+    assert b_cpu.growing == b_gpu.growing
+
+    # Compare queue point-by-point (they should be NumPy arrays)
+    assert len(b_cpu.queue) == len(b_gpu.queue)
+    for qc, qg in zip(b_cpu.queue, b_gpu.queue):
+        np.testing.assert_allclose(qc, qg, rtol=1e-6, atol=1e-8)
+
+
+@pytest.mark.gpu
+def test_branch_accepts_cupy_init_dir_and_returns_numpy_state(puv_gpu) -> None:
+    """Branch should accept CuPy init_dir on GPU but store state as NumPy arrays."""
+    import cupy as cp
+
+    mock_mesh = Mock()
+    mock_mesh.normals = np.tile(np.array([[0.0, 0.0, 1.0]]), (10, 1))
+    mock_mesh.project_new_point.side_effect = lambda pt: (pt, 0, None)
+
+    mock_nodes = Mock()
+    mock_nodes.nodes = [np.array([0.0, 0.0, 0.0])] * 10
+    mock_nodes.gradient.return_value = np.array([0.0, 1.0, 0.0])
+    mock_nodes.collision.return_value = ("ok", 1.0)
+    mock_nodes.add_nodes.side_effect = lambda pts: list(range(1, len(pts) + 1))
+    mock_nodes.update_collision_tree.return_value = None
+    mock_nodes.end_nodes = []
+
+    with puv_gpu.use("gpu", seed=0, strict=True):
+        b = Branch(
+            mesh=mock_mesh,
+            init_node=0,
+            init_dir=cp.asarray([1.0, 0.0, 0.0]),  # CuPy input
+            init_tri=0,
+            length=1.0,
+            angle=0.0,
+            w=0.0,
+            nodes=mock_nodes,
+            brother_nodes=[],
+            Nsegments=2,
+        )
+
+    # The internal state should be NumPy on purpose.
+    assert isinstance(b.dir, np.ndarray)
+    assert all(isinstance(q, np.ndarray) for q in b.queue)

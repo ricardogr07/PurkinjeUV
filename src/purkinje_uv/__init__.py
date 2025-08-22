@@ -8,18 +8,34 @@ This package offers:
 Submodules:
   - branch: Branch growth logic.
   - edge: Edge abstraction for tree connectivity.
-  - fractal_tree_uv: FractalTree generation in UV space.
+  - fractal_tree: FractalTree generation.
   - fractal_tree_parameters: Parameter container for tree generation.
   - mesh: Mesh class with geometry and FEM utilities.
   - nodes: Node management and collision/gradient utilities.
   - purkinje_tree: Activation solver on the Purkinje network.
 
 Classes:
-  Branch, Edge, FractalTree, Parameters, Mesh, Nodes, PurkinjeTree
+  Branch, Edge, FractalTree, FractalTreeParameters, Mesh, Nodes, PurkinjeTree
 
 Utilities:
   IGBReader, VTUWriter, vtkutils
 """
+
+from .config import (
+    config,
+    configure,
+    use,
+    is_gpu,
+    backend_name,
+    seed,
+    xp,
+    rng,
+    cdist,
+    to_cpu,
+    to_device,
+    norm,
+    set_log_level,
+)
 
 from purkinje_uv.branch import Branch
 from purkinje_uv.edge import Edge
@@ -38,17 +54,32 @@ from utils.vtkutils import (
 )
 
 __all__ = [
+    # Core classes
     "Branch",
     "Edge",
     "FractalTree",
     "FractalTreeParameters",
-    "Parameters",
     "Mesh",
     "Nodes",
     "PurkinjeTree",
+    # Utilities
     "IGBReader",
     "VTUWriter",
     "vtk_unstructuredgrid_from_list",
     "vtkIGBReader",
     "vtk_extract_boundary_surfaces",
+    # Configuration and backend
+    "config",
+    "configure",
+    "use",
+    "is_gpu",
+    "backend_name",
+    "seed",
+    "xp",
+    "rng",
+    "cdist",
+    "to_cpu",
+    "to_device",
+    "norm",
+    "set_log_level",
 ]

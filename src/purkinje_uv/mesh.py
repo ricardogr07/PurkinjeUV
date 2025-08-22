@@ -8,6 +8,7 @@ This module provides:
 
 Designed for fractal tree growth and surface-based FEM analysis.
 """
+from __future__ import annotations
 
 import collections
 import logging
@@ -19,8 +20,9 @@ import meshio
 import scipy.sparse as sp
 from scipy.spatial import cKDTree
 from scipy.sparse.linalg import spsolve
+from .config import xp, to_device, to_cpu, norm, backend_name
 
-logger = logging.getLogger(__name__)
+_LOGGER = logging.getLogger(__name__)
 
 
 class Mesh:
@@ -79,49 +81,106 @@ class Mesh:
             verts, connectivity = self.loadOBJ(filename)
 
         # Store verts & connectivity as NumPy arrays
-        self.verts: NDArray[Any] = np.array(verts)
-        self.connectivity: NDArray[Any] = np.array(connectivity)
+        self.verts = np.asarray(to_cpu(verts), dtype=float)
+        self.connectivity = np.asarray(to_cpu(connectivity), dtype=int)
 
-        # Compute triangle normals
-        self.normals: NDArray[Any] = np.zeros(self.connectivity.shape)
-
-        # Build node-to-triangle connectivity dictionary
-        self.node_to_tri: DefaultDict[int, List[int]] = collections.defaultdict(list)
-        for i in range(self.connectivity.shape[0]):
-            for j in range(3):
-                self.node_to_tri[self.connectivity[i, j]].append(i)
-
-            # Compute triangle normal
-            u = (
-                self.verts[self.connectivity[i, 1], :]
-                - self.verts[self.connectivity[i, 0], :]
-            )
-            v = (
-                self.verts[self.connectivity[i, 2], :]
-                - self.verts[self.connectivity[i, 0], :]
-            )
-            n = np.cross(u, v)
-            self.normals[i, :] = n / np.linalg.norm(n)
-
-        # Build KD-tree for fast nearest-node queries
-        self.tree: cKDTree = cKDTree(self.verts)
-
-        # Compute centroids for each triangle
-        self.centroids: NDArray[Any] = (
-            self.verts[self.connectivity[:, 0], :]
-            + self.verts[self.connectivity[:, 1], :]
-            + self.verts[self.connectivity[:, 2], :]
-        ) / 3.0
-
-        # Initialize optional attributes
-        self.boundary_edges: Optional[List[Tuple[int, int]]] = None
-        self.uv: Optional[NDArray[Any]] = None
-        self.triareas: Optional[NDArray[Any]] = None
-        self.uvscaling: Optional[NDArray[Any]] = None
-
-        logger.info(
-            f"Mesh initialized with {self.verts.shape[0]} vertices and {self.connectivity.shape[0]} triangles"
+        _LOGGER.debug(
+            "Mesh __init__: building geometry on backend=%s (storage on CPU)",
+            backend_name(),
         )
+
+        # ---- Geometry on active backend (vectorized) ---------------------------
+        # Move to device for heavy math, then bring results back to CPU.
+        vxp = xp.asarray(self.verts)  # (n_nodes, 3)
+        txp = xp.asarray(self.connectivity)  # (n_tris, 3) indices
+
+        a = vxp[txp[:, 0]]  # (n_tris, 3)
+        b = vxp[txp[:, 1]]
+        c = vxp[txp[:, 2]]
+
+        u = b - a
+        v = c - a
+
+        n = xp.cross(u, v)  # raw normals
+        nn = xp.linalg.norm(n, axis=1)  # (n_tris,)
+        eps = xp.asarray(1e-12)
+        safe = xp.where(nn > eps, nn, 1.0)
+        n_unit = n / safe[:, None]
+
+        centroids_xp = (a + b + c) / 3.0
+
+        # Back to CPU for storage / SciPy
+        normals_cpu: NDArray[Any] = to_cpu(n_unit)
+        nn_cpu: NDArray[Any] = to_cpu(nn)
+        deg_mask = nn_cpu <= 1e-12
+        if np.any(deg_mask):
+            # Zero-out degenerate triangle normals to avoid NaNs
+            normals_cpu[deg_mask] = 0.0
+            _LOGGER.warning(
+                "Mesh __init__: %d degenerate triangle(s) with ~zero area; normals set to 0.",
+                int(np.count_nonzero(deg_mask)),
+            )
+
+        self.normals = normals_cpu
+        self.centroids = to_cpu(centroids_xp)
+
+        # ---- Topology / search structures (CPU) --------------------------------
+        self.node_to_tri = collections.defaultdict(list)
+        for tri_idx in range(self.connectivity.shape[0]):
+            tri = self.connectivity[tri_idx]
+            # Map node -> list of triangles
+            self.node_to_tri[tri[0]].append(tri_idx)
+            self.node_to_tri[tri[1]].append(tri_idx)
+            self.node_to_tri[tri[2]].append(tri_idx)
+
+        # KD-tree stays CPU (SciPy)
+        self.tree = cKDTree(self.verts)
+
+        # ---- Optional attributes ------------------------------------------------
+        self.boundary_edges = None
+        self.uv = None
+        self.triareas = None
+        self.uvscaling = None
+
+        _LOGGER.info(
+            "Mesh initialized with %d vertices and %d triangles",
+            self.verts.shape[0],
+            self.connectivity.shape[0],
+        )
+        _LOGGER.debug(
+            "Computed centroids and normals via %s; stored on CPU (NumPy).",
+            backend_name(),
+        )
+
+    def _as_np(
+        self, a: Any, *, dtype: Optional[type | np.dtype] = None
+    ) -> NDArray[Any]:
+        """Return `a` as a NumPy array on CPU, optionally cast to `dtype`.
+
+        Args:
+            a: Array-like input (NumPy/CuPy/sequence/scalar).
+            dtype: Optional dtype to cast to (no copy if not needed).
+
+        Returns:
+            NumPy array view/copy on CPU with desired dtype.
+        """
+        arr = np.asarray(to_cpu(a))
+        return arr.astype(dtype, copy=False) if dtype is not None else arr
+
+    def _dot(self, a: Any, b: Any) -> float:
+        """Compute a backend dot-product and return a Python float.
+
+        Uses the currently active array backend (`xp`) for the computation,
+        then converts the 0-d result to a Python float.
+
+        Args:
+            a: First vector/array (NumPy/CuPy/compatible with `xp.dot`).
+            b: Second vector/array (NumPy/CuPy/compatible with `xp.dot`).
+
+        Returns:
+            The scalar dot-product as a Python float.
+        """
+        return float(np.asarray(to_cpu(xp.dot(a, b))))
 
     def loadOBJ(self, filename: str) -> Tuple[NDArray[Any], NDArray[Any]]:
         """Read a Wavefront .obj mesh file and return (verts, connectivity).
@@ -158,7 +217,7 @@ class Mesh:
                         con.append(int(w[0]) - 1)
                         numVerts += 1
                     connectivity.append(con)
-        logger.info(
+        _LOGGER.info(
             f"Loaded OBJ from {filename} with {len(verts)} vertices and {len(connectivity)} triangles"
         )
 
@@ -181,21 +240,52 @@ class Mesh:
             Tuple[NDArray[Any], int, float, float]:
                 Projected point, triangle index (−1 if outside), and barycentric coords (r, t).
         """
-        _, idxs = self.tree.query(point, verts_to_search)
-        if verts_to_search > 1:
-            for node_idx in idxs:
-                node_int: int = int(node_idx)
-                projected_point, intriangle, r, t = self.project_point_check(
-                    point, node_int
-                )
-                if intriangle != -1:
-                    return projected_point, intriangle, r, t
-        else:
-            node_int = int(idxs)
-            projected_point, intriangle, r, t = self.project_point_check(
-                point, node_int
+        if verts_to_search < 1:
+            raise ValueError("verts_to_search must be >= 1")
+
+        # Normalize to CPU/NumPy once; KD-tree is CPU-only.
+        p = np.asarray(to_cpu(point), dtype=float)
+
+        _LOGGER.debug(
+            "project_new_point: input=%s (backend=%s), k=%d",
+            p.tolist(),
+            backend_name(),
+            verts_to_search,
+        )
+
+        try:
+            _dists, idxs = self.tree.query(p, k=verts_to_search)
+        except Exception:
+            _LOGGER.exception("KD-tree query failed for point %s", p.tolist())
+            raise
+
+        # cKDTree returns scalars for k=1; arrays otherwise—normalize both.
+        idxs_arr = np.atleast_1d(idxs)
+
+        # Evaluate candidates in the order returned by KD-tree (nearest first).
+        last_result: Tuple[NDArray[Any], int, float, float] = (p, -1, -1.0, -1.0)
+
+        for node_idx in idxs_arr:
+            node_int: int = int(node_idx)
+            proj_point, intri, r, t = self.project_point_check(p, node_int)
+            _LOGGER.debug(
+                "project_new_point: candidate node=%d -> tri=%d (r=%.6g, t=%.6g)",
+                node_int,
+                intri,
+                r,
+                t,
             )
-        return projected_point, intriangle, r, t
+            last_result = (proj_point, intri, r, t)
+            if intri != -1:
+                return last_result
+
+        _LOGGER.debug(
+            "project_new_point: no containing triangle among %d candidates; "
+            "returning last projection tri=%d.",
+            len(idxs_arr),
+            last_result[1],
+        )
+        return last_result
 
     def project_point_check(
         self,
@@ -212,98 +302,137 @@ class Mesh:
              projected_point (array): the coordinates of the projected point that lies in the surface.
              intriangle (int): the index of the triangle where the projected point lies. If the point is outside surface, intriangle=-1.
         """
-        # Print closest point info in debug mode
-        if logger.isEnabledFor(logging.DEBUG):
-            d, node_idx = self.tree.query(point)
-            logger.debug(f"Closest distance: {d}, Closest node: {node_idx}")
+        EPS = 1e-12
 
-        # Get triangles list connected to that node
-        triangles_list: List[int] = self.node_to_tri[node]
-        logger.debug(f"Node {node} is connected to triangles: {triangles_list}")
+        # Normalize to CPU/NumPy once (KD-tree & arrays live on CPU).
+        p = np.asarray(to_cpu(point), dtype=float)
 
-        # Compute the vertex normal as the average of the triangle normals.
-        vertex_normal: NDArray[Any] = np.sum(self.normals[triangles_list, :], axis=0)
-        vertex_normal = vertex_normal / np.linalg.norm(vertex_normal)
+        # Quick validation of node index.
+        if node < 0 or node >= self.verts.shape[0]:
+            _LOGGER.error("project_point_check: node index out of range: %d", node)
+            return p, -1, -1.0, -1.0
 
-        # Project to the point to the closest vertex plane
-        vec_to_vertex: NDArray[Any] = point - self.verts[node]
-        distance_along_normal: float = float(np.dot(vec_to_vertex, vertex_normal))
-        pre_projected_point: NDArray[Any] = (
-            point - vertex_normal * distance_along_normal
+        # Candidate triangles attached to the seed vertex.
+        triangles_list: List[int] = self.node_to_tri.get(node, [])
+        if not triangles_list:
+            _LOGGER.warning(
+                "project_point_check: vertex %d has no adjacent triangles.", node
+            )
+            return p, -1, -1.0, -1.0
+
+        d, node_idx = self.tree.query(p)
+        _LOGGER.debug(
+            "project_point_check: seed node=%d (KD-nearest node=%d, dist=%.6g)",
+            node,
+            int(node_idx),
+            float(d),
+        )
+        _LOGGER.debug(
+            "project_point_check: triangles at node %d -> %s",
+            node,
+            triangles_list,
         )
 
-        # Calculate the distance from point to plane (Closest point projection)
-        CPP: List[float] = []
+        # Vertex normal = average of connected triangle normals.
+        vertex_normal = np.sum(self.normals[triangles_list, :], axis=0)
+        nrm = float(np.linalg.norm(vertex_normal))
+        if nrm < EPS or not np.isfinite(nrm):
+            # Fall back to the first triangle normal to avoid degeneracy.
+            fallback_tri = int(triangles_list[0])
+            vertex_normal = self.normals[fallback_tri, :].copy()
+            nrm = float(np.linalg.norm(vertex_normal))
+            _LOGGER.debug(
+                "project_point_check: degenerate avg normal at node %d; falling back to tri %d normal.",
+                node,
+                fallback_tri,
+            )
+        vertex_normal /= nrm
+
+        # Project point onto the plane through the vertex with this normal.
+        vec_to_vertex = p - self.verts[node]
+        distance_along_normal = float(np.dot(vec_to_vertex, vertex_normal))
+        pre_projected_point = p - vertex_normal * distance_along_normal
+
+        # Distance from pre_projected_point to each candidate triangle plane.
+        cpp_vals: List[float] = []
         for tri in triangles_list:
-            val: float = float(
+            val = float(
                 np.dot(
                     pre_projected_point - self.verts[self.connectivity[tri, 0], :],
                     self.normals[tri, :],
                 )
             )
-            CPP.append(val)
-        CPP_arr: NDArray[Any] = np.array(CPP, dtype=float)
+            cpp_vals.append(val)
+        cpp_arr = np.asarray(cpp_vals, dtype=float)
+        tri_arr = np.asarray(triangles_list, dtype=int)
 
-        logger.debug(f"CPP={CPP}")
+        order = np.abs(cpp_arr).argsort()
+        _LOGGER.debug(
+            "project_point_check: |CPP| sorted (first 5)=%s",
+            np.abs(cpp_arr[order])[:5].tolist(),
+        )
 
-        triangles_arr: NDArray[Any] = np.array(triangles_list, dtype=int)
+        intriangle = -1
+        projected_point = pre_projected_point
+        r = -1.0
+        t = -1.0
 
-        # Sort from closest to furthest
-        order: NDArray[Any] = np.abs(CPP_arr).argsort()
-        logger.debug(f"CPP sorted: {CPP_arr[order]}")
-
-        # Check if point is in triangle
-        intriangle: int = -1
-        projected_point: NDArray[Any] = pre_projected_point
-        r: float = -1.0
-        t: float = -1.0
-
+        # Test candidate triangles from closest plane to furthest.
         for o in order:
-            idx: int = int(o)
-            tri_idx: int = int(triangles_arr[idx])
+            idx = int(o)
+            tri_idx = int(tri_arr[idx])
 
-            projected_pt: NDArray[Any] = (
-                pre_projected_point - CPP_arr[idx] * self.normals[tri_idx, :]
+            # Project onto this triangle's plane.
+            projected_pt = pre_projected_point - cpp_arr[idx] * self.normals[tri_idx, :]
+
+            # Triangle edge vectors and local w.
+            a = int(self.connectivity[tri_idx, 0])
+            b = int(self.connectivity[tri_idx, 1])
+            c = int(self.connectivity[tri_idx, 2])
+
+            u = self.verts[b, :] - self.verts[a, :]
+            v = self.verts[c, :] - self.verts[a, :]
+            w_vec = projected_pt - self.verts[a, :]
+
+            # Robust barycentric test using cross products (signs).
+            vxw = np.cross(v, w_vec)
+            vxu = np.cross(v, u)
+            uxw = np.cross(u, w_vec)
+
+            sign_r = float(np.dot(vxw, vxu))
+            sign_t = float(np.dot(uxw, -vxu))
+
+            _LOGGER.debug(
+                "project_point_check: tri=%d sign_r=%.6g sign_t=%.6g",
+                tri_idx,
+                sign_r,
+                sign_t,
             )
 
-            u: NDArray[Any] = (
-                self.verts[self.connectivity[tri_idx, 1], :]
-                - self.verts[self.connectivity[tri_idx, 0], :]
-            )
+            if sign_r >= 0.0 and sign_t >= 0.0:
+                denom = float(np.linalg.norm(vxu))
+                if denom < EPS or not np.isfinite(denom):
+                    _LOGGER.debug(
+                        "project_point_check: tri=%d degenerate vxu; skipping.", tri_idx
+                    )
+                    continue
 
-            v: NDArray[Any] = (
-                self.verts[self.connectivity[tri_idx, 2], :]
-                - self.verts[self.connectivity[tri_idx, 0], :]
-            )
+                r_try = float(np.linalg.norm(vxw) / denom)
+                t_try = float(np.linalg.norm(uxw) / denom)
 
-            w: NDArray[Any] = (
-                projected_pt - self.verts[self.connectivity[tri_idx, 0], :]
-            )
+                _LOGGER.debug(
+                    "project_point_check: tri=%d r=%.6g t=%.6g", tri_idx, r_try, t_try
+                )
 
-            logger.debug(
-                f"Check orthogonality: np.dot(w, self.normals[{tri_idx}, :]) = "
-                f"{np.dot(w, self.normals[tri_idx, :])}"
-            )
-
-            vxw: NDArray[Any] = np.cross(v, w)
-            vxu: NDArray[Any] = np.cross(v, u)
-            uxw: NDArray[Any] = np.cross(u, w)
-            sign_r: float = float(np.dot(vxw, vxu))
-            sign_t: float = float(np.dot(uxw, -vxu))
-
-            logger.debug(f"sign_r={sign_r}, sign_t={sign_t}")
-
-            if sign_r >= 0 and sign_t >= 0:
-                r = float(np.linalg.norm(vxw) / np.linalg.norm(vxu))
-                t = float(np.linalg.norm(uxw) / np.linalg.norm(vxu))
-
-                logger.debug(f"Sign ok: r={r}, t={t}")
-
-                if r <= 1 and t <= 1 and (r + t) <= 1.001:
-                    logger.debug(f"In triangle {tri_idx}")
+                # Allow tiny tolerance to accept boundary hits.
+                if r_try <= 1.0 and t_try <= 1.0 and (r_try + t_try) <= 1.001:
                     intriangle = tri_idx
                     projected_point = projected_pt
+                    r = r_try
+                    t = t_try
+                    _LOGGER.debug("project_point_check: inside tri=%d", tri_idx)
                     break
+
         return projected_point, intriangle, r, t
 
     def writeVTU(
@@ -312,17 +441,72 @@ class Mesh:
         point_data: Optional[Dict[str, NDArray[Any]]] = None,
         cell_data: Optional[Dict[str, NDArray[Any]]] = None,
     ) -> None:
-        """Export this mesh (and optional point/cell data) in VTU format."""
-        # Define cells for meshio: (cell_type, connectivity array)
-        cells: List[Tuple[str, NDArray[Any]]] = [("triangle", self.connectivity)]
-        m_out = meshio.Mesh(self.verts, cells)
+        """Export this mesh (and optional point/cell data) in VTU format.
 
-        if point_data is not None:
-            m_out.point_data = point_data
-        if cell_data is not None:
-            m_out.cell_data = cell_data
+        Accepts NumPy or CuPy arrays; all data are converted to NumPy on CPU
+        before writing. `cell_data` is normalized to meshio's expected shape
+        (dict of name -> list-of-arrays, per cell block).
 
-        m_out.write(filename)
+        Args:
+            filename: Output path (e.g., ``"mesh.vtu"``).
+            point_data: Optional dict of per-node arrays (shape (n_nodes,) or (n_nodes, k)).
+            cell_data: Optional dict of per-triangle arrays (shape (n_tris,) or (n_tris, k)).
+
+        Raises:
+            ValueError: If provided data have incompatible lengths.
+            Exception: If the underlying mesh writer fails.
+        """
+        try:
+            # Ensure core arrays are CPU/NumPy with correct dtypes.
+            pts = self._as_np(self.verts, dtype=float)
+            con = self._as_np(self.connectivity, dtype=int)
+
+            # Build meshio Mesh (single triangle cell block).
+            cells: List[Tuple[str, NDArray[Any]]] = [("triangle", con)]
+            m = meshio.Mesh(points=pts, cells=cells)
+
+            # Normalize point_data
+            if point_data:
+                for name, arr in point_data.items():
+                    arr_np = self._as_np(arr)
+                    if arr_np.shape[0] != pts.shape[0]:
+                        msg = (
+                            f"point_data['{name}'] length {arr_np.shape[0]} "
+                            f"!= n_nodes {pts.shape[0]}"
+                        )
+                        _LOGGER.error("writeVTU: %s", msg)
+                        raise ValueError(msg)
+                    m.point_data[name] = arr_np
+
+            # Normalize cell_data to meshio's structure: dict[str] -> List[np.ndarray]
+            if cell_data:
+                n_tris = con.shape[0]
+                normalized: Dict[str, List[NDArray[Any]]] = {}
+                for name, arr in cell_data.items():
+                    arr_np = self._as_np(arr)
+                    if arr_np.shape[0] != n_tris:
+                        msg = (
+                            f"cell_data['{name}'] length {arr_np.shape[0]} "
+                            f"!= n_tris {n_tris}"
+                        )
+                        _LOGGER.error("writeVTU: %s", msg)
+                        raise ValueError(msg)
+                    normalized[name] = [arr_np]
+                m.cell_data = normalized
+
+            m.write(filename)
+            _LOGGER.info(
+                "VTU written to '%s' (nodes=%d, tris=%d, point_data=%d, cell_data=%d)",
+                filename,
+                pts.shape[0],
+                con.shape[0],
+                0 if not point_data else len(point_data),
+                0 if not cell_data else len(cell_data),
+            )
+
+        except Exception:
+            _LOGGER.exception("writeVTU failed for '%s'.", filename)
+            raise
 
     def Bmatrix(self, element: int) -> Tuple[NDArray[Any], float]:
         """Compute the B-matrix and Jacobian determinant for a triangle.
@@ -335,34 +519,64 @@ class Mesh:
                 - B (2×3 array): Strain-displacement matrix.
                 - J (float): Twice the triangle area (Jacobian determinant).
         """
-        # Extract vertex coordinates for this triangle
-        nodeCoords: NDArray[Any] = self.verts[self.connectivity[element]]
+        # Gather triangle vertices on CPU, then send to active device.
+        tri_idx = self.connectivity[element]
+        node_coords_cpu: NDArray[Any] = self.verts[tri_idx]  # (3, 3) NumPy
+        node_coords = to_device(node_coords_cpu, dtype=float)  # (3, 3) on backend
 
-        # Build local orthonormal frame (e1, e2)
-        edge21: NDArray[Any] = nodeCoords[1, :] - nodeCoords[0, :]
-        e1: NDArray[Any] = edge21 / np.linalg.norm(edge21)
+        # Local orthonormal frame (e1 along edge 2->1, e2 within the triangle plane).
+        edge21 = node_coords[1] - node_coords[0]
+        n_edge21 = float(norm(edge21))
+        if n_edge21 <= 0.0 or not np.isfinite(n_edge21):
+            _LOGGER.error("Bmatrix(%d): degenerate edge length.", element)
+            raise ValueError("Degenerate triangle: zero edge length.")
 
-        temp: NDArray[Any] = nodeCoords[2, :] - nodeCoords[0, :]
-        proj: float = float(np.dot(temp, e1))
-        perp: NDArray[Any] = temp - proj * e1
-        e2: NDArray[Any] = perp / np.linalg.norm(perp)
+        e1 = edge21 / n_edge21
 
-        # Compute scalar edge projections
-        x21: float = float(np.dot(edge21, e1))
-        x13: float = float(np.dot(nodeCoords[0, :] - nodeCoords[2, :], e1))
-        x32: float = float(np.dot(nodeCoords[2, :] - nodeCoords[1, :], e1))
+        temp = node_coords[2] - node_coords[0]
+        proj = self._dot(temp, e1)
+        perp = temp - proj * e1
+        n_perp = float(norm(perp))
+        if n_perp <= 0.0 or not np.isfinite(n_perp):
+            _LOGGER.error(
+                "Bmatrix(%d): colinear vertices (zero perpendicular).", element
+            )
+            raise ValueError("Degenerate triangle: vertices nearly colinear.")
 
-        y23: float = float(np.dot(nodeCoords[1, :] - nodeCoords[2, :], e2))
-        y31: float = float(np.dot(nodeCoords[2, :] - nodeCoords[0, :], e2))
-        y12: float = float(np.dot(nodeCoords[0, :] - nodeCoords[1, :], e2))
+        e2 = perp / n_perp
 
-        # Compute Jacobian (twice the triangle area)
-        J: float = x13 * y23 - y31 * x32
+        # Scalar edge projections in local frame.
+        x21 = self._dot(edge21, e1)
+        x13 = self._dot(node_coords[0] - node_coords[2], e1)
+        x32 = self._dot(node_coords[2] - node_coords[1], e1)
 
-        # Assemble B‐matrix
-        B: NDArray[Any] = np.array([[y23, y31, y12], [x32, x13, x21]], dtype=float)
+        y23 = self._dot(node_coords[1] - node_coords[2], e2)
+        y31 = self._dot(node_coords[2] - node_coords[0], e2)
+        y12 = self._dot(node_coords[0] - node_coords[1], e2)
 
-        return B, J
+        # Jacobian (twice area).
+        J = x13 * y23 - y31 * x32
+        if not np.isfinite(J) or abs(J) < 1e-15:
+            _LOGGER.error("Bmatrix(%d): near-zero area (J=%g).", element, J)
+            raise ValueError("Degenerate triangle: near-zero area.")
+
+        # Assemble B on device, then bring back to CPU.
+        B_dev = xp.array([[y23, y31, y12], [x32, x13, x21]], dtype=float)
+        B: NDArray[Any] = to_cpu(B_dev)
+
+        if _LOGGER.isEnabledFor(logging.DEBUG):
+            e1_cpu = to_cpu(e1).tolist()
+            e2_cpu = to_cpu(e2).tolist()
+            _LOGGER.debug(
+                "Bmatrix(elem=%d, backend=%s): e1=%s e2=%s J=%.6e",
+                element,
+                backend_name(),
+                e1_cpu,
+                e2_cpu,
+                J,
+            )
+
+        return B, float(J)
 
     def gradient(self, element: int, u: NDArray[Any]) -> NDArray[Any]:
         """Compute the gradient of a scalar field over a triangle.
@@ -374,34 +588,75 @@ class Mesh:
         Returns:
             NDArray[Any]: 3-vector of gradients in 3D space.
         """
-        node_coords: NDArray[Any] = self.verts[self.connectivity[element]]
-        edge_vec: NDArray[Any] = node_coords[1, :] - node_coords[0, :]
-        e1: NDArray[Any] = edge_vec / np.linalg.norm(edge_vec)
+        tri_idx = self.connectivity[element]
 
-        temp: NDArray[Any] = node_coords[2, :] - node_coords[0, :]
-        proj: float = float(np.dot(temp, e1))
-        perp: NDArray[Any] = temp - proj * e1
-        e2: NDArray[Any] = perp / np.linalg.norm(perp)
+        # Bring vertex coords to device; ensure float dtype.
+        node_coords_cpu: NDArray[Any] = self.verts[tri_idx]  # (3, 3) NumPy
+        node_coords = to_device(node_coords_cpu, dtype=float)  # backend array
 
-        e3: NDArray[Any] = np.cross(e1, e2)
+        # Bring u to device (flatten to length-3).
+        u_dev = to_device(u, dtype=float).reshape(3)
 
-        x21: float = float(np.dot(edge_vec, e1))
-        x13: float = float(np.dot(node_coords[0, :] - node_coords[2, :], e1))
-        x32: float = float(np.dot(node_coords[2, :] - node_coords[1, :], e1))
+        # Build local orthonormal frame (e1, e2) within the triangle plane.
+        edge21 = node_coords[1] - node_coords[0]
+        n_edge21 = float(norm(edge21))
+        if n_edge21 <= 0.0 or not np.isfinite(n_edge21):
+            _LOGGER.error("gradient(%d): degenerate edge length.", element)
+            raise ValueError("Degenerate triangle: zero edge length.")
 
-        y23: float = float(np.dot(node_coords[1, :] - node_coords[2, :], e2))
-        y31: float = float(np.dot(node_coords[2, :] - node_coords[0, :], e2))
-        y12: float = float(np.dot(node_coords[0, :] - node_coords[1, :], e2))
+        e1 = edge21 / n_edge21
 
-        J: float = x13 * y23 - y31 * x32
-        B: NDArray[Any] = np.array([[y23, y31, y12], [x32, x13, x21]], dtype=float)
+        temp = node_coords[2] - node_coords[0]
+        proj = self._dot(temp, e1)
+        perp = temp - proj * e1
+        n_perp = float(norm(perp))
+        if n_perp <= 0.0 or not np.isfinite(n_perp):
+            _LOGGER.error(
+                "gradient(%d): colinear vertices (zero perpendicular).", element
+            )
+            raise ValueError("Degenerate triangle: vertices nearly colinear.")
 
-        grad: NDArray[Any] = np.zeros(3, dtype=float)
-        grad_vals: NDArray[Any] = np.dot(B, u) / J
-        grad[:2] = grad_vals
+        e2 = perp / n_perp
+        e3 = xp.cross(e1, e2)
 
-        R: NDArray[Any] = np.vstack((e1, e2, e3)).T
-        result: NDArray[Any] = np.dot(R, grad)
+        # Scalar edge projections in local frame.
+        x21 = self._dot(edge21, e1)
+        x13 = self._dot(node_coords[0] - node_coords[2], e1)
+        x32 = self._dot(node_coords[2] - node_coords[1], e1)
+
+        y23 = self._dot(node_coords[1] - node_coords[2], e2)
+        y31 = self._dot(node_coords[2] - node_coords[0], e2)
+        y12 = self._dot(node_coords[0] - node_coords[1], e2)
+
+        # Jacobian (twice area).
+        J = x13 * y23 - y31 * x32
+        if not np.isfinite(J) or abs(J) < 1e-15:
+            _LOGGER.error("gradient(%d): near-zero area (J=%g).", element, J)
+            raise ValueError("Degenerate triangle: near-zero area.")
+
+        # B-matrix on device, then compute in-plane gradient components.
+        B_dev = xp.array([[y23, y31, y12], [x32, x13, x21]], dtype=float)  # (2, 3)
+        grad_vals_dev = (B_dev @ u_dev) / J  # (2,)
+
+        # Expand to 3-vector in the local frame: [grad_x, grad_y, 0].
+        grad_dev = xp.zeros(3, dtype=float)
+        grad_dev[:2] = grad_vals_dev
+
+        # Rotate back to global frame with columns [e1 e2 e3].
+        R_dev = xp.vstack((e1, e2, e3)).T  # (3, 3)
+        result_dev = R_dev @ grad_dev  # (3,)
+
+        result = to_cpu(result_dev)
+
+        if _LOGGER.isEnabledFor(logging.DEBUG):
+            _LOGGER.debug(
+                "gradient(elem=%d, backend=%s): J=%.6e, grad=%s",
+                element,
+                backend_name(),
+                J,
+                result.tolist(),
+            )
+
         return result
 
     def StiffnessMatrix(self, B: NDArray[Any], J: float) -> NDArray[Any]:
@@ -414,11 +669,29 @@ class Mesh:
         Returns:
             NDArray[Any]: 3×3 stiffness matrix.
         """
-        result: NDArray[Any] = np.dot(B.T, B) / (2.0 * J)
-        return result
+        # Normalize inputs (CPU/NumPy)
+        B_np = self._as_np(B, dtype=float)
+
+        if B_np.shape != (2, 3):
+            _LOGGER.error("StiffnessMatrix: expected B shape (2,3), got %s", B_np.shape)
+            raise ValueError(f"Invalid B shape {B_np.shape}; expected (2, 3).")
+
+        if not (np.isfinite(J) and abs(J) >= 1e-15):
+            _LOGGER.error("StiffnessMatrix: invalid J=%r (non-finite or near zero).", J)
+            raise ValueError("Degenerate triangle: invalid J for stiffness.")
+
+        K = (B_np.T @ B_np) / (2.0 * J)
+
+        _LOGGER.debug(
+            "StiffnessMatrix: J=%.6e, K=%s",
+            float(J),
+            np.array2string(K, precision=6, suppress_small=True),
+        )
+
+        return K
 
     def MassMatrix(self, J: float) -> NDArray[Any]:
-        """Compute the local mass matrix for a triangle.
+        """Compute the 3×3 (consistent) local mass matrix for a triangle.
 
         Args:
             J (float): Jacobian determinant.
@@ -426,12 +699,23 @@ class Mesh:
         Returns:
             NDArray[Any]: 3×3 mass matrix.
         """
-        result: NDArray[Any] = (
-            np.array([[2.0, 1.0, 1.0], [1.0, 2.0, 1.0], [1.0, 1.0, 2.0]], dtype=float)
-            * J
-            / 12
+        if not (np.isfinite(J) and abs(J) >= 1e-15):
+            _LOGGER.error("MassMatrix: invalid J=%r (non-finite or near zero).", J)
+            raise ValueError("Degenerate triangle: invalid J for mass.")
+
+        M = (J / 12.0) * np.array(
+            [[2.0, 1.0, 1.0], [1.0, 2.0, 1.0], [1.0, 1.0, 2.0]],
+            dtype=float,
         )
-        return result
+
+        if _LOGGER.isEnabledFor(logging.DEBUG):
+            _LOGGER.debug(
+                "MassMatrix: J=%.6e, M=%s",
+                float(J),
+                np.array2string(M, precision=6, suppress_small=True),
+            )
+
+        return M
 
     def ForceVector(
         self,
@@ -449,8 +733,30 @@ class Mesh:
         Returns:
             NDArray[Any]: Length-3 force vector.
         """
-        result: NDArray[Any] = np.dot(B.T, X) / 2.0
-        return result
+        # Normalize inputs to CPU/NumPy float
+        B_np = self._as_np(B, dtype=float)
+        X_np = self._as_np(X, dtype=float).reshape(-1)
+
+        # Basic shape validation
+        if B_np.ndim != 2 or B_np.shape[1] != 3:
+            raise ValueError(f"ForceVector: B must be (2,3) or (k,3); got {B_np.shape}")
+        if X_np.ndim != 1 or X_np.shape[0] != B_np.shape[0]:
+            raise ValueError(
+                f"ForceVector: X must be (B.shape[0],); got {X_np.shape} vs B rows {B_np.shape[0]}"
+            )
+
+        # Compute force
+        F = (B_np.T @ X_np) / 2.0  # shape (3,)
+
+        _LOGGER.debug(
+            "ForceVector: J=%.6e , ||B||=%.6e, ||X||=%.6e, F=%s",
+            float(J),
+            float(np.linalg.norm(B_np)),
+            float(np.linalg.norm(X_np)),
+            np.array2string(F, precision=6, suppress_small=True),
+        )
+
+        return F
 
     def computeGeodesic(
         self,
@@ -476,67 +782,150 @@ class Mesh:
                 - ATglobal: Per-node geodesic distance.
                 - Xs: Per-triangle gradient directions.
         """
-        nNodes: int = self.verts.shape[0]
-        nElem: int = self.connectivity.shape[0]
+        if dt <= 0.0 or not np.isfinite(dt):
+            raise ValueError(
+                f"computeGeodesic: dt must be positive and finite; got {dt}"
+            )
 
-        #        K = sp.lil_matrix((nNodes, nNodes))
-        #        M = sp.lil_matrix((nNodes, nNodes))
+        n_nodes: int = int(self.verts.shape[0])
+        n_elem: int = int(self.connectivity.shape[0])
 
-        F: NDArray[Any] = np.zeros((nNodes, 1), dtype=float)
-        u0: NDArray[Any] = np.zeros((nNodes, 1), dtype=float)
-        u0[nodes] = 1e6
+        if n_nodes == 0 or n_elem == 0:
+            raise ValueError("computeGeodesic: empty mesh (no nodes or no elements).")
 
-        # dt = 10.0
+        # Normalize Dirichlet data
+        bc_nodes: List[int] = [int(i) for i in nodes]
+        bc_vals: NDArray[Any] = self._as_np(nodeVals, dtype=float).reshape(-1)
+        if len(bc_nodes) != bc_vals.shape[0]:
+            raise ValueError(
+                f"computeGeodesic: nodes (len={len(bc_nodes)}) and nodeVals (len={bc_vals.shape[0]}) mismatch."
+            )
 
-        if (K is None) or (M is None):
-            K = np.zeros((nNodes, nNodes), dtype=float)
-            M = np.zeros((nNodes, nNodes), dtype=float)
-            for el, tri in enumerate(self.connectivity):
-                j, i = np.meshgrid(tri, tri)
-                B, J = self.Bmatrix(el)
-                k_mat = self.StiffnessMatrix(B, J)
-                m_mat = self.MassMatrix(J)
-                K[i, j] += k_mat
-                M[i, j] += m_mat
-
-        activeNodes: List[int] = list(range(nNodes))
-        for known in nodes:
-            activeNodes.remove(known)
-
-        jActive, iActive = np.meshgrid(activeNodes, activeNodes)
-        jKnown, iKnown = np.meshgrid(nodes, activeNodes)
-
-        A1: sp.spmatrix = sp.csr.csr_matrix(M + dt * K)
-        u: NDArray[Any] = spsolve(A1, u0)[:, None]
-        #  u = np.linalg.solve(M + dt*K,u0)
-
-        Xs: NDArray[Any] = np.zeros((nElem, 3), dtype=float)
-        Js: NDArray[Any] = np.zeros((nElem, 1), dtype=float)
-
-        for k, tri in enumerate(self.connectivity):
-            j, i = np.meshgrid(tri, tri)
-            B, J = self.Bmatrix(k)
-            Js[k] = J
-            X: NDArray[Any] = self.gradient(k, u[tri, 0])
-            Xs[k, :] = X / np.linalg.norm(X)
-            Xnr: NDArray[Any] = np.dot(B, u[tri, 0])
-            Xnr /= np.linalg.norm(Xnr)
-            f: NDArray[Any] = self.ForceVector(B, J, Xnr)
-            F[tri, 0] -= f
-
-        A2: sp.spmatrix = sp.csr.csr_matrix(K[iActive, jActive])
-        AT: NDArray[Any] = spsolve(
-            A2, F[activeNodes, 0] - np.dot(K[iKnown, jKnown], nodeVals)
+        _LOGGER.debug(
+            "computeGeodesic: n_nodes=%d n_elem=%d | #Dirichlet=%d dt=%.6g",
+            n_nodes,
+            n_elem,
+            len(bc_nodes),
+            dt,
         )
-        #  AT = np.linalg.solve(K[iActive, jActive],F[activeNodes,0]-np.dot(K[iKnown, jKnown],nodeVals))
 
-        ATglobal: NDArray[Any] = np.zeros(nNodes, dtype=float)
-        ATglobal[activeNodes] = AT
-        ATglobal[nodes] = nodeVals
+        # -------------------------------------------------------------------------
+        # Heat solve (M + dt K) u = u0  (u0: large point sources on bc nodes)
+        # -------------------------------------------------------------------------
+        if K is None or M is None:
+            # Assemble sparse K, M (LIL for efficient increment, then CSR)
+            K_lil: sp.lil_matrix = sp.lil_matrix((n_nodes, n_nodes), dtype=float)
+            M_lil: sp.lil_matrix = sp.lil_matrix((n_nodes, n_nodes), dtype=float)
+
+            for el, tri in enumerate(self.connectivity):
+                tri_idx = np.asarray(tri, dtype=int)
+                B, J = self.Bmatrix(el)  # (2,3), scalar
+                k_loc = self.StiffnessMatrix(B, J)  # (3,3)
+                m_loc = self.MassMatrix(J)  # (3,3)
+
+                for a in range(3):
+                    ia = int(tri_idx[a])
+                    for b in range(3):
+                        ib = int(tri_idx[b])
+                        K_lil[ia, ib] += k_loc[a, b]
+                        M_lil[ia, ib] += m_loc[a, b]
+
+            K = K_lil.tocsr()
+            M = M_lil.tocsr()
+            _LOGGER.debug(
+                "computeGeodesic: assembled K,M sparsity -> nnz(K)=%d nnz(M)=%d",
+                int(K.nnz),
+                int(M.nnz),
+            )
+        else:
+            # Ensure CSR for efficient slicing/solving
+            K = K.tocsr() if not isinstance(K, sp.csr_matrix) else K
+            M = M.tocsr() if not isinstance(M, sp.csr_matrix) else M
+
+        # Large heat sources at bc_nodes
+        u0: NDArray[Any] = np.zeros(n_nodes, dtype=float)
+        u0[bc_nodes] = 1e6
+
+        A1: sp.spmatrix = (M + dt * K).tocsr()
+        try:
+            u_vec: NDArray[Any] = spsolve(A1, u0)  # shape (n_nodes,)
+        except Exception:
+            _LOGGER.exception("computeGeodesic: heat solve failed.")
+            raise
+
+        # Column view for element indexing consistency
+        u_col: NDArray[Any] = u_vec[:, None]
+
+        # -------------------------------------------------------------------------
+        # Per-element normalized gradients of u
+        # -------------------------------------------------------------------------
+        Xs: NDArray[Any] = np.zeros((n_elem, 3), dtype=float)
+        for k, tri in enumerate(self.connectivity):
+            tri_idx = np.asarray(tri, dtype=int)
+            B, J = self.Bmatrix(k)
+            # gradient expects the 3 nodal values for this triangle
+            X = self.gradient(k, u_col[tri_idx, 0])  # (3,)
+            nX = float(np.linalg.norm(X))
+            if nX > 0.0 and np.isfinite(nX):
+                Xs[k, :] = X / nX
+            else:
+                Xs[k, :] = 0.0
+
+        # -------------------------------------------------------------------------
+        # Assemble RHS F and solve K * AT = F with Dirichlet BCs
+        # -------------------------------------------------------------------------
+        F: NDArray[Any] = np.zeros(n_nodes, dtype=float)
+        for k, tri in enumerate(self.connectivity):
+            tri_idx = np.asarray(tri, dtype=int)
+            B, J = self.Bmatrix(k)
+            # In-plane quantity for the force formula (same as legacy)
+            xnr = B @ u_col[tri_idx, 0]  # (2,)
+            n_xnr = float(np.linalg.norm(xnr))
+            if n_xnr > 0.0 and np.isfinite(n_xnr):
+                xnr /= n_xnr
+            f_loc = self.ForceVector(B, J, xnr)  # (3,)
+            # Scatter-add local force into global RHS
+            for a in range(3):
+                F[int(tri_idx[a])] -= f_loc[a]
+
+        # Dirichlet split
+        active_nodes: List[int] = [i for i in range(n_nodes) if i not in bc_nodes]
+        if not active_nodes:
+            # Trivial case: all nodes prescribed
+            result_at = np.zeros(n_nodes, dtype=float)
+            result_at[bc_nodes] = bc_vals
+            if filename is not None:
+                self.writeVTU(filename, point_data={"d": result_at})
+            return result_at, Xs
+
+        # Kaa * AT_active = F_active - Kab * bc_vals
+        try:
+            Kaa = K[active_nodes, :][:, active_nodes]
+            Kab = K[active_nodes, :][:, bc_nodes]
+            rhs = F[active_nodes] - Kab.dot(bc_vals)
+            AT_active: NDArray[Any] = spsolve(Kaa, rhs)
+        except Exception:
+            _LOGGER.exception("computeGeodesic: Dirichlet solve failed.")
+            raise
+
+        ATglobal: NDArray[Any] = np.zeros(n_nodes, dtype=float)
+        ATglobal[active_nodes] = AT_active
+        ATglobal[bc_nodes] = bc_vals
 
         if filename is not None:
-            self.writeVTU(filename, point_data={"d": ATglobal})
+            try:
+                self.writeVTU(filename, point_data={"d": ATglobal})
+            except Exception:
+                _LOGGER.exception(
+                    "computeGeodesic: writeVTU failed for '%s'.", filename
+                )
+                raise
 
+        _LOGGER.debug(
+            "computeGeodesic: completed (active=%d, fixed=%d).",
+            len(active_nodes),
+            len(bc_nodes),
+        )
         return ATglobal, Xs
 
     def computeLaplace(
@@ -555,39 +944,68 @@ class Mesh:
         Returns:
             NDArray[Any]: Solution vector of length n_nodes.
         """
-        nNodes = self.verts.shape[0]
+        n_nodes: int = int(self.verts.shape[0])
+        if n_nodes == 0:
+            raise ValueError("computeLaplace: empty mesh (no nodes).")
 
-        K: sp.spmatrix
-        M: sp.spmatrix
-        K, M = self.computeLaplacian()
+        # Normalize BC inputs
+        bc_nodes: list[int] = [int(i) for i in nodes]
+        bc_vals: NDArray[Any] = self._as_np(nodeVals, dtype=float).reshape(-1)
+        if len(bc_nodes) != bc_vals.shape[0]:
+            raise ValueError(
+                f"computeLaplace: nodes (len={len(bc_nodes)}) and nodeVals (len={bc_vals.shape[0]}) mismatch."
+            )
 
-        F: NDArray[Any] = np.zeros((nNodes, 1), dtype=float)
-
-        activeNodes: List[int] = list(range(nNodes))
-
-        for known in nodes:
-            activeNodes.remove(known)
-
-        jActive: NDArray[Any]
-        iActive: NDArray[Any]
-        jActive, iActive = np.meshgrid(activeNodes, activeNodes)
-
-        jKnown: NDArray[Any]
-        iKnown: NDArray[Any]
-        jKnown, iKnown = np.meshgrid(nodes, activeNodes)
-
-        T: NDArray[Any] = spsolve(
-            K[iActive, jActive],
-            F[activeNodes, 0] - K[iKnown, jKnown].dot(nodeVals),
+        _LOGGER.debug(
+            "computeLaplace: n_nodes=%d | #Dirichlet=%d",
+            n_nodes,
+            len(bc_nodes),
         )
 
-        Tglobal: NDArray[Any] = np.zeros(nNodes, dtype=float)
-        Tglobal[activeNodes] = T
-        Tglobal[nodes] = nodeVals
+        # Assemble global matrices (CSR); CPU solve via SciPy
+        K, _M = self.computeLaplacian()
+        K = K.tocsr()
+
+        # Dirichlet split
+        active_nodes: list[int] = [i for i in range(n_nodes) if i not in bc_nodes]
+        if not active_nodes:
+            # Trivial case: all nodes prescribed
+            result_t = np.zeros(n_nodes, dtype=float)
+            result_t[bc_nodes] = bc_vals
+            if filename is not None:
+                self.writeVTU(filename, point_data={"u": result_t})
+            return result_t
+
+        # Proper blocks: Kaa is square (active×active), Kab is (active×bc)
+        Kaa = K[active_nodes, :][:, active_nodes]
+        Kab = K[active_nodes, :][:, bc_nodes]
+
+        # RHS with zero forcing: Kaa * T_active = -Kab * bc_vals
+        rhs = -Kab.dot(bc_vals)
+
+        try:
+            T_active: NDArray[Any] = spsolve(Kaa, rhs)
+        except Exception:
+            _LOGGER.exception("computeLaplace: Dirichlet solve failed.")
+            raise
+
+        # Assemble global solution
+        Tglobal: NDArray[Any] = np.zeros(n_nodes, dtype=float)
+        Tglobal[active_nodes] = T_active
+        Tglobal[bc_nodes] = bc_vals
 
         if filename is not None:
-            self.writeVTU(filename, point_data={"u": Tglobal})
+            try:
+                self.writeVTU(filename, point_data={"u": Tglobal})
+            except Exception:
+                _LOGGER.exception("computeLaplace: writeVTU failed for '%s'.", filename)
+                raise
 
+        _LOGGER.debug(
+            "computeLaplace: solved (active=%d, fixed=%d).",
+            len(active_nodes),
+            len(bc_nodes),
+        )
         return Tglobal
 
     def computeLaplacian(self) -> Tuple[sp.spmatrix, sp.spmatrix]:
@@ -596,27 +1014,60 @@ class Mesh:
         Returns:
             Tuple[sp.spmatrix, sp.spmatrix]: (K, M) in CSR format.
         """
-        nNodes: int = self.verts.shape[0]
+        n_nodes: int = int(self.verts.shape[0])
+        n_tris: int = int(self.connectivity.shape[0])
+        if n_nodes == 0 or n_tris == 0:
+            raise ValueError("computeLaplacian: empty mesh.")
 
-        K: sp.spmatrix = sp.lil_matrix((nNodes, nNodes))
-        M: sp.spmatrix = sp.lil_matrix((nNodes, nNodes))
+        # COO builder lists (faster than repeated updates)
+        rows_K: list[int] = []
+        cols_K: list[int] = []
+        data_K: list[float] = []
+        rows_M: list[int] = []
+        cols_M: list[int] = []
+        data_M: list[float] = []
 
-        for elem_idx, tri in enumerate(self.connectivity):
-            j: NDArray[Any]
-            i: NDArray[Any]
-            j, i = np.meshgrid(tri, tri)
+        # Assemble element-by-element
+        for elem_idx in range(n_tris):
+            tri = self.connectivity[elem_idx]  # shape (3,)
 
-            B: NDArray[Any]
-            J: float
+            # Local FEM pieces (B on CPU, J as float)
             B, J = self.Bmatrix(elem_idx)
+            K_loc = self.StiffnessMatrix(B, J)  # (3,3) np.ndarray
+            M_loc = self.MassMatrix(J)  # (3,3) np.ndarray
 
-            K_local: NDArray[Any] = self.StiffnessMatrix(B, J)
-            K[i, j] += K_local
+            # Map 3x3 block into global COO (row-major order)
+            # rows: [t0,t0,t0, t1,t1,t1, t2,t2,t2]
+            # cols: [t0,t1,t2, t0,t1,t2, t0,t1,t2]
+            tri_rows = np.repeat(tri, 3)
+            tri_cols = np.tile(tri, 3)
 
-            M_local: NDArray[Any] = self.MassMatrix(J)
-            M[i, j] += M_local
+            rows_K.extend(tri_rows.tolist())
+            cols_K.extend(tri_cols.tolist())
+            data_K.extend(K_loc.ravel(order="C").tolist())
 
-        return K.tocsr(), M.tocsr()
+            rows_M.extend(tri_rows.tolist())
+            cols_M.extend(tri_cols.tolist())
+            data_M.extend(M_loc.ravel(order="C").tolist())
+
+        # Build CSR once
+        K = sp.coo_matrix(
+            (data_K, (rows_K, cols_K)), shape=(n_nodes, n_nodes), dtype=float
+        ).tocsr()
+        M = sp.coo_matrix(
+            (data_M, (rows_M, cols_M)), shape=(n_nodes, n_nodes), dtype=float
+        ).tocsr()
+
+        _LOGGER.debug(
+            "computeLaplacian: assembled K/M (nodes=%d, tris=%d, nnzK=%d, nnzM=%d, backend=%s)",
+            n_nodes,
+            n_tris,
+            K.nnz,
+            M.nnz,
+            backend_name(),
+        )
+
+        return K, M
 
     def uvmap(self, filename: Optional[str] = None) -> None:
         """Compute UV coordinates by solving Laplace's equation.
@@ -624,18 +1075,47 @@ class Mesh:
         Args:
             filename (Optional[str]): VTU export path for u and v fields.
         """
-        around_nodes: list[int]
-        bc_u: NDArray[Any]
-        bc_v: NDArray[Any]
+        # Generate boundary and BCs (NumPy on CPU)
         around_nodes, bc_u, bc_v = self.uv_bc()
 
-        u: NDArray[Any] = self.computeLaplace(around_nodes[:-1], bc_u)
-        v: NDArray[Any] = self.computeLaplace(around_nodes[:-1], bc_v)
+        n_nodes = int(self.verts.shape[0])
+        _LOGGER.debug(
+            "uvmap: boundary nodes=%d (loop includes repeat of start), "
+            "mesh nodes=%d",
+            len(around_nodes),
+            n_nodes,
+        )
 
-        if filename is not None:
-            self.writeVTU(filename, point_data={"u": u, "v": v})
-        uv_arr: NDArray[Any] = np.vstack([u, v]).T
+        # Solve two Laplace problems with Dirichlet BC on the boundary loop
+        u = self.computeLaplace(around_nodes[:-1], bc_u)  # length n_nodes
+        v = self.computeLaplace(around_nodes[:-1], bc_v)  # length n_nodes
+
+        if u.shape[0] != n_nodes or v.shape[0] != n_nodes:
+            raise ValueError(
+                f"uvmap: Laplace solutions have wrong length (u={u.shape}, v={v.shape}, "
+                f"expected {n_nodes})"
+            )
+
+        # Stack into (n_nodes, 2) UV array
+        uv_arr = np.vstack([u, v]).T.astype(float, copy=False)
         self.uv = uv_arr
+
+        # Optional VTU export of the scalar fields
+        if filename is not None:
+            try:
+                self.writeVTU(filename, point_data={"u": u, "v": v})
+            except Exception:
+                _LOGGER.exception("uvmap: writeVTU failed for '%s'", filename)
+                raise
+
+        preview = uv_arr[: min(5, uv_arr.shape[0])].tolist()
+        _LOGGER.debug(
+            "uvmap: completed (backend=%s). UV shape=%s, preview(first %d)=%s",
+            backend_name(),
+            uv_arr.shape,
+            len(preview),
+            preview,
+        )
 
     def compute_uvscaling(self) -> None:
         """Compute and validate UV-scaling metric per triangle."""
@@ -643,41 +1123,85 @@ class Mesh:
             self.uvmap()
         assert self.uv is not None
 
-        metrics: List[NDArray[Any]] = []
+        n_tris = int(self.connectivity.shape[0])
+        uvscale = np.empty(n_tris, dtype=float)
 
-        for e in range(self.connectivity.shape[0]):
+        for e in range(n_tris):
+            # B_e (2×3), J_e (float); Bmatrix already guards against degeneracy
             B, J = self.Bmatrix(e)
-            uv_e: NDArray[Any] = self.uv[self.connectivity[e]]
-            F: NDArray[Any] = np.matmul(B, uv_e) / J
-            metrics.append(np.matmul(F.T, F))
 
-        eigvals, _ = np.linalg.eig(metrics)
-        uvscale_arr: NDArray[Any] = (eigvals[:, 0] + eigvals[:, 1]) / 2
-        self.uvscaling = uvscale_arr
+            # uv values at this triangle's vertices: (3, 2)
+            uv_e = self.uv[self.connectivity[e]]  # NumPy indexing on CPU
 
-        if uvscale_arr.min() < 0:
-            logger.error("Flipped triangles detected — check mesh quality")
+            # Deformation gradient in UV space: F = (2×3 @ 3×2) / scalar -> (2×2)
+            F = (B @ uv_e) / J
+
+            # Metric = average eigenvalue of F^T F = 0.5 * trace(F^T F)
+            G = F.T @ F  # (2×2), symmetric PSD
+            uvscale[e] = 0.5 * float(np.trace(G))
+
+        self.uvscaling = uvscale
+
+        # Basic sanity check (should be non-negative; allow tiny numerical noise)
+        min_val = float(np.min(uvscale))
+        if min_val < -1e-12:
+            _LOGGER.error(
+                "compute_uvscaling: negative metric detected (min=%g) — possible flipped triangles.",
+                min_val,
+            )
             raise ValueError("Flipped triangles detected — check mesh quality")
+
+        _LOGGER.debug(
+            "compute_uvscaling: done (backend=%s). min=%g mean=%g max=%g",
+            backend_name(),
+            float(np.min(uvscale)),
+            float(np.mean(uvscale)),
+            float(np.max(uvscale)),
+        )
 
     def detect_boundary(self) -> None:
         """Identify boundary edges (edges in exactly one triangle)."""
-        edge_dict: DefaultDict[Tuple[int, int], List[int]] = collections.defaultdict(
-            list
-        )
+        conn = np.asarray(self.connectivity, dtype=int)
+        if conn.ndim != 2 or conn.shape[1] != 3:
+            raise ValueError(f"connectivity must be (n_tri, 3); got {conn.shape}")
 
-        for tri_idx, el in enumerate(self.connectivity):
-            for offset in ((0, 1), (1, 2), (2, 0)):
-                n1, n2 = el[offset[0]], el[offset[1]]
-                edge_key: Tuple[int, int] = (min(n1, n2), max(n1, n2))
-                edge_dict[edge_key].append(tri_idx)
+        n_tris = int(conn.shape[0])
+        n_verts = int(self.verts.shape[0])
 
-        boundary_edges: List[Tuple[int, int]] = []
+        # Basic index validation
+        if (conn < 0).any() or (conn >= n_verts).any():
+            _LOGGER.error("detect_boundary: connectivity has out-of-range indices.")
+            raise ValueError("Connectivity contains out-of-range vertex indices.")
 
-        for edge_key, tris in edge_dict.items():
-            if len(tris) == 1:
-                boundary_edges.append(edge_key)
+        edge_count: dict[tuple[int, int], int] = {}
+        for tri_idx in range(n_tris):
+            a, b, c = map(int, conn[tri_idx])
+            # undirected edges
+            for u, v in ((a, b), (b, c), (c, a)):
+                key = (u, v) if u < v else (v, u)
+                edge_count[key] = edge_count.get(key, 0) + 1
+
+        boundary_edges: list[tuple[int, int]] = [
+            e for e, k in edge_count.items() if k == 1
+        ]
+        nonmanifold_edges: list[tuple[int, int]] = [
+            e for e, k in edge_count.items() if k > 2
+        ]
 
         self.boundary_edges = boundary_edges
+
+        if nonmanifold_edges:
+            _LOGGER.warning(
+                "detect_boundary: %d non-manifold edge(s) detected (used by >2 tris).",
+                len(nonmanifold_edges),
+            )
+
+        _LOGGER.debug(
+            "detect_boundary: tris=%d -> boundary_edges=%d (unique undirected edges=%d).",
+            n_tris,
+            len(boundary_edges),
+            len(edge_count),
+        )
 
     def uv_bc(self) -> Tuple[List[int], NDArray[Any], NDArray[Any]]:
         """Generate UV boundary loop and boundary conditions.
@@ -688,54 +1212,164 @@ class Mesh:
         """
         if self.boundary_edges is None:
             self.detect_boundary()
-        assert self.boundary_edges is not None
 
-        boundary_node2edge: DefaultDict[
-            int, List[Tuple[int, int]]
-        ] = collections.defaultdict(list)
-        for edge in self.boundary_edges:
-            boundary_node2edge[edge[0]].append(edge)
-            boundary_node2edge[edge[1]].append(edge)
+        edges = self.boundary_edges or []
+        if not edges:
+            raise ValueError("uv_bc: no boundary edges available.")
 
-        around_nodes: List[int] = list(self.boundary_edges[0])
-        last_edge: Tuple[int, int] = self.boundary_edges[0]
+        # Build adjacency for the boundary graph (undirected)
+        adj: DefaultDict[int, List[int]] = collections.defaultdict(list)
+        for u, v in edges:
+            adj[u].append(v)
+            adj[v].append(u)
 
-        while around_nodes[0] != around_nodes[-1]:
-            edges: List[Tuple[int, int]] = boundary_node2edge[around_nodes[-1]].copy()
-            edges.remove(last_edge)
-            new_nodes: List[int] = list(edges[0])
-            new_nodes.remove(around_nodes[-1])
-            around_nodes.append(new_nodes[0])
-            last_edge = edges[0]
-            if len(around_nodes) >= self.verts.shape[0]:
-                logger.error(
-                    "UV boundary traversal exceeded mesh size — boundary may be broken"
+        # Sanity checks: manifold boundary nodes typically have degree 2
+        deg1 = [n for n, nbrs in adj.items() if len(nbrs) == 1]
+        deggt2 = [n for n, nbrs in adj.items() if len(nbrs) > 2]
+        if deg1:
+            _LOGGER.warning(
+                "uv_bc: found %d boundary node(s) with degree 1 (open boundary).",
+                len(deg1),
+            )
+        if deggt2:
+            _LOGGER.warning(
+                "uv_bc: found %d non-manifold boundary node(s) (degree > 2).",
+                len(deggt2),
+            )
+
+        # Start from the first boundary edge; try to walk a closed loop
+        start_u, start_v = edges[0]
+        around_nodes: List[int] = [int(start_u), int(start_v)]
+
+        # Walk until we return to start_u (closed loop), or we fail
+        # Put a safety cap to avoid infinite loops
+        max_steps = len(adj) * 2 + 4
+        steps = 0
+        while around_nodes[-1] != around_nodes[0]:
+            steps += 1
+            if steps > max_steps:
+                _LOGGER.error(
+                    "uv_bc: loop walk exceeded safety cap; boundary may be broken."
+                )
+                raise ValueError(
+                    "UV boundary traversal exceeded safety cap; boundary may be broken."
+                )
+
+            prev_node = around_nodes[-2]
+            cur_node = around_nodes[-1]
+            nbrs = adj[cur_node]
+            if not nbrs:
+                _LOGGER.error(
+                    "uv_bc: dead-end at boundary node %d; boundary may be broken.",
+                    cur_node,
+                )
+                raise ValueError(
+                    "UV boundary traversal hit a dead-end; boundary may be broken."
+                )
+
+            # Choose the neighbor that's not the previous node (prefer a simple cycle)
+            next_candidates = [n for n in nbrs if n != prev_node]
+            if not next_candidates:
+                # Only possible neighbor is the previous node; this suggests a 2-node loop or dead-end
+                # If the previous is the start and we can close, do it; otherwise it's broken.
+                if prev_node == around_nodes[0]:
+                    around_nodes.append(prev_node)
+                    break
+                _LOGGER.error(
+                    "uv_bc: stuck oscillating between nodes %d and %d.",
+                    prev_node,
+                    cur_node,
+                )
+                raise ValueError("UV boundary traversal stuck; boundary may be broken.")
+
+            next_node = int(next_candidates[0])
+            around_nodes.append(next_node)
+
+            # Hard cap to avoid traversing more nodes than exist
+            if len(around_nodes) > self.verts.shape[0] + 2:
+                _LOGGER.error(
+                    "uv_bc: traversal exceeded number of vertices (%d); boundary may be broken.",
+                    self.verts.shape[0],
                 )
                 raise ValueError(
                     "UV boundary traversal exceeded mesh size — boundary may be broken"
                 )
 
-        lengths: NDArray[Any] = np.cumsum(
-            np.linalg.norm(
-                self.verts[around_nodes[:-1]] - self.verts[around_nodes[1:]],
-                axis=1,
-            )
-        )
-        total_length: float = float(lengths[-1])
-        bc_u: NDArray[Any] = np.sin(2 * np.pi * lengths / total_length)
-        bc_v: NDArray[Any] = np.cos(2 * np.pi * lengths / total_length)
+        # We now have a closed loop with around_nodes[0] == around_nodes[-1]
+        if len(around_nodes) < 3:
+            _LOGGER.error("uv_bc: degenerate boundary loop with < 3 unique nodes.")
+            raise ValueError("Degenerate boundary: need at least 3 unique nodes.")
 
-        return around_nodes, bc_u, bc_v
+        # Parameterize by cumulative arc-length along the loop (exclude the last duplicate)
+        pts = self.verts  # (n, 3) NumPy
+        seg_vecs = pts[around_nodes[1:]] - pts[around_nodes[:-1]]
+        seg_lengths = np.linalg.norm(seg_vecs, axis=1)  # length = len(around_nodes) - 1
+        cum_lengths = np.cumsum(seg_lengths)
+        if not np.isfinite(cum_lengths).all():
+            _LOGGER.error("uv_bc: non-finite segment lengths encountered.")
+            raise ValueError("Non-finite segment lengths on boundary.")
+
+        total_length = float(cum_lengths[-1])
+        if total_length <= 0.0 or not np.isfinite(total_length):
+            _LOGGER.error("uv_bc: zero or non-finite total boundary length.")
+            raise ValueError("Degenerate boundary length.")
+
+        # Sin/cos pattern along the loop, defined at unique nodes (exclude last duplicate)
+        # cum_lengths currently has length N-1 and corresponds to nodes 1..N-1
+        # Make lengths aligned to nodes 0..N-2 by prepending 0 (start node distance = 0)
+        lengths_for_nodes = np.concatenate([[0.0], cum_lengths[:-1]])  # shape N-1
+        theta = 2.0 * np.pi * (lengths_for_nodes / total_length)
+        bc_u = np.sin(theta)
+        bc_v = np.cos(theta)
+
+        _LOGGER.debug(
+            "uv_bc: closed loop with %d unique nodes, total_length=%.6g.",
+            len(around_nodes) - 1,
+            total_length,
+        )
+
+        return around_nodes, bc_u.astype(float), bc_v.astype(float)
 
     def compute_triareas(self) -> None:
         """Compute triangle areas (J/2) and store in `self.triareas`."""
-        triareas_list: List[float] = []
-        for e in range(self.connectivity.shape[0]):
-            _, J = self.Bmatrix(e)
-            triareas_list.append(J / 2.0)
+        tri = self.connectivity  # (n_tri, 3) int
+        a = self.verts[tri[:, 0], :]  # (n_tri, 3)
+        b = self.verts[tri[:, 1], :]
+        c = self.verts[tri[:, 2], :]
 
-        triareas_arr: NDArray[Any] = np.array(triareas_list, dtype=float)
-        self.triareas = triareas_arr
+        u = b - a
+        v = c - a
+        cross_uv = np.cross(u, v)  # (n_tri, 3)
+        twice_area = np.linalg.norm(cross_uv, axis=1)  # ||u×v||
+
+        triareas = twice_area * 0.5  # area = 0.5 * ||u×v||
+
+        # Handle non-finite/near-zero areas robustly
+        bad = ~np.isfinite(triareas)
+        if np.any(bad):
+            _LOGGER.warning(
+                "compute_triareas: %d non-finite triangle area(s) set to 0.",
+                int(bad.sum()),
+            )
+            triareas[bad] = 0.0
+
+        eps = 1e-15
+        deg = triareas <= eps
+        if np.any(deg):
+            _LOGGER.warning(
+                "compute_triareas: %d degenerate triangle(s) with near-zero area.",
+                int(deg.sum()),
+            )
+
+        self.triareas = triareas.astype(float, copy=False)
+
+        _LOGGER.debug(
+            "compute_triareas: n=%d  min=%.6g  max=%.6g  mean=%.6g",
+            triareas.size,
+            float(np.min(triareas)) if triareas.size else 0.0,
+            float(np.max(triareas)) if triareas.size else 0.0,
+            float(np.mean(triareas)) if triareas.size else 0.0,
+        )
 
     def tri2node_interpolation(self, cell_field: NDArray[Any]) -> List[float]:
         """Interpolate triangle-based field to nodes by area-weighting.
@@ -746,23 +1380,59 @@ class Mesh:
         Returns:
             List[float]: Per-node interpolated values.
         """
-        if self.triareas is None:
+        # Ensure triangle areas exist
+        if (
+            self.triareas is None
+            or self.triareas.shape[0] != self.connectivity.shape[0]
+        ):
+            _LOGGER.debug("tri2node_interpolation: computing triangle areas...")
             self.compute_triareas()
         assert self.triareas is not None
 
-        node_field: List[float] = []
-        for i in range(self.verts.shape[0]):
-            tris: List[int] = self.node_to_tri[i]
-            areas: NDArray[Any] = self.triareas[tris]
-            fields: NDArray[Any] = cell_field[tris]
-            nodal_val: float = float(np.sum(areas * fields) / np.sum(areas))
-            node_field.append(nodal_val)
+        # Normalize inputs to CPU/NumPy
+        tri_vals = np.asarray(to_cpu(cell_field), dtype=float).reshape(-1)
+        tri = self.connectivity  # (T, 3) ints
+        areas = np.asarray(self.triareas, dtype=float).reshape(-1)
 
-        return node_field
+        T = tri.shape[0]
+        if tri_vals.shape[0] != T:
+            raise ValueError(
+                f"tri2node_interpolation: cell_field length {tri_vals.shape[0]} "
+                f"!= n_triangles {T}"
+            )
 
-    # TODO Is this deprecated?
-    # def compute_uvscaling_nodes(self):
-    #     uvmesh =
-    #     if self.uvscaling is None:
-    #         self.compute_uvscaling()
-    #     self.uvscaling_nodes = self.tri2node_interpolation(self.uvscaling)
+        n_nodes = self.verts.shape[0]
+        num = np.zeros(n_nodes, dtype=float)  # numerator accumulator
+        den = np.zeros(n_nodes, dtype=float)  # denominator accumulator
+
+        # Contribution per triangle (area * value)
+        contrib = areas * tri_vals  # (T,)
+
+        # Accumulate to each of the 3 nodes per triangle (vectorized with add.at)
+        for j in range(3):
+            np.add.at(num, tri[:, j], contrib)
+            np.add.at(den, tri[:, j], areas)
+
+        # Compute final node values; handle zero-area neighborhoods robustly
+        out = np.zeros(n_nodes, dtype=float)
+        valid = den > 0.0
+        out[valid] = num[valid] / den[valid]
+
+        zero_deg = (~valid).sum()
+        if zero_deg:
+            _LOGGER.warning(
+                "tri2node_interpolation: %d node(s) have zero total incident area; "
+                "setting their values to 0.",
+                int(zero_deg),
+            )
+
+        _LOGGER.debug(
+            "tri2node_interpolation: T=%d, N=%d, min=%.6g, max=%.6g, mean=%.6g",
+            T,
+            n_nodes,
+            float(out.min(initial=0.0)),
+            float(out.max(initial=0.0)),
+            float(out.mean()) if n_nodes else 0.0,
+        )
+
+        return [float(x) for x in out]
