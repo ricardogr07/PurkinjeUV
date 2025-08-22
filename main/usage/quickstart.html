@@ -246,6 +246,7 @@
 </li>
 <li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">Usage</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of Usage</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
 <li class="toctree-l2 current current-page"><a class="current reference internal" href="#">Quickstart</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#backend-selection-cpu-gpu">Backend selection (CPU/GPU)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="workflow.html">Workflow</a></li>
 </ul>
 </li>
@@ -360,6 +361,82 @@ Adjust file paths and parameters as needed.</p>
 </ul>
 </section>
 </section>
+<section id="backend-selection-cpu-gpu">
+<h1>Backend selection (CPU/GPU)<a class="headerlink" href="#backend-selection-cpu-gpu" title="Link to this heading">¶</a></h1>
+<p>This package can run on CPU (NumPy) or GPU (CuPy). By default, if CuPy is
+<em>not</em> installed, everything runs on CPU. If CuPy is installed and available,
+you can choose the backend explicitly.</p>
+<section id="install">
+<h2>Install<a class="headerlink" href="#install" title="Link to this heading">¶</a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># CPU-only</span>
+pip<span class="w"> </span>install<span class="w"> </span>-U<span class="w"> </span>purkinje-uv
+
+<span class="c1"># GPU (Linux/Colab with CUDA 12)</span>
+pip<span class="w"> </span>install<span class="w"> </span>-U<span class="w"> </span><span class="s2">&quot;purkinje-uv[gpu]&quot;</span>
+</pre></div>
+</div>
+</section>
+<section id="select-backend">
+<h2>Select backend<a class="headerlink" href="#select-backend" title="Link to this heading">¶</a></h2>
+<p>Use the context manager to force CPU or GPU:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">purkinje_uv.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">use</span><span class="p">,</span> <span class="n">is_gpu</span><span class="p">,</span> <span class="n">backend_name</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">purkinje_uv</span><span class="w"> </span><span class="kn">import</span> <span class="n">PurkinjeTree</span>
+
+<span class="c1"># Assume you already built: nodes, connectivity, pmj_ids, x0, x0_vals</span>
+<span class="n">tree</span> <span class="o">=</span> <span class="n">PurkinjeTree</span><span class="p">(</span><span class="n">nodes</span><span class="o">=</span><span class="n">nodes</span><span class="p">,</span> <span class="n">connectivity</span><span class="o">=</span><span class="n">connectivity</span><span class="p">,</span> <span class="n">end_nodes</span><span class="o">=</span><span class="n">pmj_ids</span><span class="p">)</span>
+
+<span class="c1"># --- Force CPU (NumPy) ---</span>
+<span class="k">with</span> <span class="n">use</span><span class="p">(</span><span class="s2">&quot;cpu&quot;</span><span class="p">):</span>
+    <span class="k">assert</span> <span class="ow">not</span> <span class="n">is_gpu</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Backend:&quot;</span><span class="p">,</span> <span class="n">backend_name</span><span class="p">())</span>  <span class="c1"># e.g., &#39;numpy&#39;</span>
+    <span class="n">act_pmj</span> <span class="o">=</span> <span class="n">tree</span><span class="o">.</span><span class="n">activate_fim</span><span class="p">(</span><span class="n">x0</span><span class="p">,</span> <span class="n">x0_vals</span><span class="p">,</span> <span class="n">return_only_pmj</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># --- Force GPU (CuPy) ---</span>
+<span class="c1"># Requires CuPy installed and a visible CUDA device.</span>
+<span class="k">with</span> <span class="n">use</span><span class="p">(</span><span class="s2">&quot;cuda&quot;</span><span class="p">):</span>
+    <span class="k">assert</span> <span class="n">is_gpu</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Backend:&quot;</span><span class="p">,</span> <span class="n">backend_name</span><span class="p">())</span>  <span class="c1"># e.g., &#39;cupy&#39;</span>
+    <span class="n">act_pmj</span> <span class="o">=</span> <span class="n">tree</span><span class="o">.</span><span class="n">activate_fim</span><span class="p">(</span><span class="n">x0</span><span class="p">,</span> <span class="n">x0_vals</span><span class="p">,</span> <span class="n">return_only_pmj</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="how-it-routes-devices">
+<h2>How it routes devices<a class="headerlink" href="#how-it-routes-devices" title="Link to this heading">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">PurkinjeTree.activate_fim</span></code> checks the active backend via <code class="docutils literal notranslate"><span class="pre">is_gpu()</span></code> and
+selects the FIM solver device accordingly:</p>
+<ul class="simple">
+<li><p>CPU backend → <code class="docutils literal notranslate"><span class="pre">device=&quot;cpu&quot;</span></code></p></li>
+<li><p>GPU backend → <code class="docutils literal notranslate"><span class="pre">device=&quot;cuda&quot;</span></code></p></li>
+</ul>
+<p>So switching the context with <code class="docutils literal notranslate"><span class="pre">use(&quot;cpu&quot;)</span></code> / <code class="docutils literal notranslate"><span class="pre">use(&quot;cuda&quot;)</span></code> is enough. No
+extra flags are needed at the call site.</p>
+</section>
+<section id="sanity-checks">
+<h2>Sanity checks<a class="headerlink" href="#sanity-checks" title="Link to this heading">¶</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">purkinje_uv.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">use</span><span class="p">,</span> <span class="n">is_gpu</span><span class="p">,</span> <span class="n">backend_name</span>
+
+<span class="k">with</span> <span class="n">use</span><span class="p">(</span><span class="s2">&quot;cpu&quot;</span><span class="p">):</span>
+    <span class="k">assert</span> <span class="ow">not</span> <span class="n">is_gpu</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;CPU OK:&quot;</span><span class="p">,</span> <span class="n">backend_name</span><span class="p">())</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="k">with</span> <span class="n">use</span><span class="p">(</span><span class="s2">&quot;cuda&quot;</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="n">is_gpu</span><span class="p">(),</span> <span class="s2">&quot;CuPy/CUDA not available&quot;</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;GPU OK:&quot;</span><span class="p">,</span> <span class="n">backend_name</span><span class="p">())</span>
+<span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;GPU unavailable, staying on CPU:&quot;</span><span class="p">,</span> <span class="n">exc</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="id1">
+<h2>Notes<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p>On Colab, set <strong>Runtime → Change runtime type → GPU</strong> to use T4/L4/A100.</p></li>
+<li><p>The GPU extra installs <code class="docutils literal notranslate"><span class="pre">cupy-cuda12x</span></code> on Linux (matches Colab’s CUDA 12).</p></li>
+<li><p>If GPU execution fails at runtime, the code falls back to CPU automatically.</p></li>
+</ul>
+</section>
+</section>
 
         </article>
       </div>
@@ -418,6 +495,14 @@ Adjust file paths and parameters as needed.</p>
             <ul>
 <li><a class="reference internal" href="#">Quickstart</a><ul>
 <li><a class="reference internal" href="#notes">Notes</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#backend-selection-cpu-gpu">Backend selection (CPU/GPU)</a><ul>
+<li><a class="reference internal" href="#install">Install</a></li>
+<li><a class="reference internal" href="#select-backend">Select backend</a></li>
+<li><a class="reference internal" href="#how-it-routes-devices">How it routes devices</a></li>
+<li><a class="reference internal" href="#sanity-checks">Sanity checks</a></li>
+<li><a class="reference internal" href="#id1">Notes</a></li>
 </ul>
 </li>
 </ul>
