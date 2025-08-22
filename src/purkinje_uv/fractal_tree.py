@@ -637,6 +637,17 @@ class FractalTree:
         _LOGGER.info("Branching complete: new edges queued=%d", len(branching_queue))
         return branching_queue, branch_id
 
+    def _branch_idx_dev(self, bid: int, branches: DefaultDict[int, list[int]]) -> Any:
+        return xp.asarray(np.asarray(branches[bid], dtype=int))
+
+    def _nodes_uv_dev(self, nodes: list[NDArray[np.float64]]) -> Any:
+        """Return device (N,2) array of current UV node coords."""
+        return xp.asarray(np.asarray(nodes, dtype=float))
+
+    def _vec2_dev(self, v: NDArray[np.float64]) -> Any:
+        """Return device 2D vector for a single UV point."""
+        return xp.asarray(np.asarray(v, dtype=float))
+
     def _growing_generation(
         self,
         *,
@@ -674,51 +685,57 @@ class FractalTree:
 
                 pred = nodes[edge.n2]  # 2D (u, v) numpy array
 
-                # --- GPU-accelerated distances to all existing nodes ---
-                # NOTE: we rebuild the device array *inside* the loop to preserve legacy
-                # semantics (newly added nodes in this step must be visible to later tips).
-                nodes_mat_dev = xp.asarray(np.asarray(nodes, dtype=float))  # (N, 2)
-                pred_dev = xp.asarray(pred, dtype=float)  # (2,)
-                d_dev = xp.linalg.norm(nodes_mat_dev - pred_dev, axis=1)  # (N,)
+                # --- GPU-accelerated distances to all existing nodes (SQUARED) ---
+                # Rebuild device array inside the loop to preserve legacy semantics.
+                nodes_mat_dev = self._nodes_uv_dev(nodes)  # (N, 2)
+                pred_dev = self._vec2_dev(pred)  # (2,)
 
-                # Mask own-branch & sister-branch nodes to a huge value
-                own_idx = xp.asarray(np.asarray(branches[b], dtype=int))
-                d_dev[own_idx] = 1e9
+                diffs = nodes_mat_dev - pred_dev  # (N, 2)
+                d2 = xp.sum(diffs * diffs, axis=1)  # (N,) squared distances
 
-                sister = sister_branches.get(b)
-                if sister is None:
-                    raise RuntimeError(f"Sister branch not found for branch {b}.")
-                sis_idx = xp.asarray(np.asarray(branches[sister], dtype=int))
+                # Mask own-branch & sister-branch nodes to +inf
+                own_idx = self._branch_idx_dev(b, branches)
+                xp.put(d2, own_idx, xp.inf)
 
-                sister_vals = d_dev[sis_idx].copy()
-                d_dev[sis_idx] = 1e9
+                sister = sister_branches[b]
+                sis_idx = self._branch_idx_dev(sister, branches)
+                sister_vals_d2 = d2[sis_idx].copy()
+                xp.put(d2, sis_idx, xp.inf)
 
                 # Local step-size scaling from the VTK locator (CPU)
                 s, _ = self._scaling(nodes[edge.n2])
 
-                # Collision check (min distance vs 0.9 * dx * s)
-                min_dist = float(to_cpu(d_dev.min()))
-                if min_dist < 0.9 * dx * s:
+                # Collision check (min squared distance vs (0.9*dx*s)^2)
+                th2 = (0.9 * dx * s) ** 2
+                min_d2 = float(to_cpu(xp.min(d2)))
+                if min_d2 < th2:
                     end_nodes.append(edge.n2)
                     _LOGGER.debug(
-                        "Grow step %d/%d: edge=%d terminated by collision (min=%.6g, thr=%.6g)",
+                        "Grow step %d/%d: edge=%d terminated by collision (min2=%.6g, thr2=%.6g)",
                         step + 1,
                         n_steps,
                         edge_id,
-                        min_dist,
-                        0.9 * dx * s,
+                        min_d2,
+                        th2,
                     )
                     continue
 
-                # Restore sister distances (legacy parity)
-                d_dev[sis_idx] = sister_vals
+                # Restore sister distances (legacy parity) before choosing nearest
+                d2[sis_idx] = sister_vals_d2
 
                 # Nearest index (GPU -> CPU scalar)
-                nearest_idx = int(to_cpu(xp.argmin(d_dev)))
-                denom = float(to_cpu(d_dev[nearest_idx])) or 1e-12  # avoid zero divide
+                nearest_idx = int(to_cpu(xp.argmin(d2)))
+                nearest_d2 = float(to_cpu(d2[nearest_idx]))
+                nearest_dist = (
+                    np.sqrt(nearest_d2)
+                    if nearest_d2 > 0.0 and np.isfinite(nearest_d2)
+                    else 1.0
+                )
 
-                # Gradient away from nearest disallowed point (CPU math)
-                grad_dist = (pred - nodes[nearest_idx]) / denom
+                # Gradient away from nearest disallowed point
+                nearest_pt_dev = nodes_mat_dev[nearest_idx]  # (2,)
+                grad_dev = (pred_dev - nearest_pt_dev) / nearest_dist  # (2,)
+                grad_dist = to_cpu(grad_dev)  # np.ndarray, shape (2,)
 
                 new_dir = edge.dir + w * grad_dist
                 new_dir /= np.linalg.norm(new_dir)
@@ -736,7 +753,7 @@ class FractalTree:
                     )
                     continue
 
-                # Commit new node/edge (legacy FIFO behavior)
+                # Commit new node/edge
                 new_node_id = len(nodes)
                 nodes.append(new_node)
                 branches[b].append(new_node_id)
