@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.3.1](https://github.com/ricardogr07/purkinje-uv/compare/v0.3.0...v0.3.1) (2025-08-22)
+
+### Features
+
+* add GPU support
+
 ## [0.3.0](https://github.com/ricardogr07/purkinje-uv/compare/v0.2.2...v0.3.0) (2025-08-16)
 
 
