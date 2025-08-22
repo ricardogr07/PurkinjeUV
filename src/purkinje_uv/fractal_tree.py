@@ -17,7 +17,7 @@ from collections import defaultdict
 from .mesh import Mesh
 from .edge import Edge
 from .fractal_tree_parameters import FractalTreeParameters
-from .config import backend_name, to_cpu
+from .config import xp, backend_name, to_cpu
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -637,7 +637,7 @@ class FractalTree:
         _LOGGER.info("Branching complete: new edges queued=%d", len(branching_queue))
         return branching_queue, branch_id
 
-    def _grow_generation(
+    def _growing_generation(
         self,
         *,
         edge_queue: list[int],
@@ -650,12 +650,14 @@ class FractalTree:
         branch_length: float,
         end_nodes: list[int],
     ) -> list[int]:
-        """Advance all current tips forward for a fixed arc-length (legacy-parity).
-
-        Returns the next `edge_queue` (tips that keep growing into the next phase).
-        """
+        """Advance all active tips by arc-length `branch_length` (legacy-parity), accelerating the all-pairs distance calc on the GPU when available."""
         n_steps = int(branch_length / dx)
-        _LOGGER.info("Growing generation: steps=%d, dx=%.6g, w=%.6g", n_steps, dx, w)
+        _LOGGER.info(
+            "Growing phase: steps=%d, dx=%.6g, backend=%s",
+            n_steps,
+            dx,
+            backend_name(),
+        )
 
         for step in range(n_steps):
             growing_queue: list[int] = []
@@ -664,81 +666,97 @@ class FractalTree:
                 edge_id = edge_queue.pop(0)
                 edge = edges[edge_id]
 
-                pred = nodes[edge.n2]
-
-                # Vectorized distances to all nodes
-                all_dist = np.linalg.norm(np.asarray(nodes) - pred, axis=1)
-
-                # Exclude own branch nodes
                 b = edge.branch
                 if b is None:
-                    raise RuntimeError("Edge without branch id; invariant broken.")
-                all_dist[branches[b]] = 1e9  # large sentinel
+                    raise RuntimeError(
+                        "Edge has no branch id (internal invariant violated)."
+                    )
 
-                # Exclude sister branch nodes (but keep a copy to restore below)
-                sis = sister_branches.get(b)
-                sis_vals = None
-                if sis is not None and sis in branches:
-                    sis_vals = all_dist[branches[sis]].copy()
-                    all_dist[branches[sis]] = 1e9
+                pred = nodes[edge.n2]  # 2D (u, v) numpy array
 
-                # Local scaling
+                # --- GPU-accelerated distances to all existing nodes ---
+                # NOTE: we rebuild the device array *inside* the loop to preserve legacy
+                # semantics (newly added nodes in this step must be visible to later tips).
+                nodes_mat_dev = xp.asarray(np.asarray(nodes, dtype=float))  # (N, 2)
+                pred_dev = xp.asarray(pred, dtype=float)  # (2,)
+                d_dev = xp.linalg.norm(nodes_mat_dev - pred_dev, axis=1)  # (N,)
+
+                # Mask own-branch & sister-branch nodes to a huge value
+                own_idx = xp.asarray(np.asarray(branches[b], dtype=int))
+                d_dev[own_idx] = 1e9
+
+                sister = sister_branches.get(b)
+                if sister is None:
+                    raise RuntimeError(f"Sister branch not found for branch {b}.")
+                sis_idx = xp.asarray(np.asarray(branches[sister], dtype=int))
+
+                sister_vals = d_dev[sis_idx].copy()
+                d_dev[sis_idx] = 1e9
+
+                # Local step-size scaling from the VTK locator (CPU)
                 s, _ = self._scaling(nodes[edge.n2])
 
-                # Collision rule (legacy): stop if too close to any excluded node
-                if float(all_dist.min()) < 0.9 * dx * s:
+                # Collision check (min distance vs 0.9 * dx * s)
+                min_dist = float(to_cpu(d_dev.min()))
+                if min_dist < 0.9 * dx * s:
                     end_nodes.append(edge.n2)
                     _LOGGER.debug(
-                        "Grow stop: edge=%d tip=%d (collision threshold)",
+                        "Grow step %d/%d: edge=%d terminated by collision (min=%.6g, thr=%.6g)",
+                        step + 1,
+                        n_steps,
                         edge_id,
-                        edge.n2,
+                        min_dist,
+                        0.9 * dx * s,
                     )
                     continue
 
-                # Restore sister distances to compute gradient direction
-                if sis is not None and sis in branches and sis_vals is not None:
-                    all_dist[branches[sis]] = sis_vals
+                # Restore sister distances (legacy parity)
+                d_dev[sis_idx] = sister_vals
 
-                # Gradient = away from nearest disallowed point
-                nearest_idx = int(np.argmin(all_dist))
-                grad_dist = (pred - nodes[nearest_idx]) / float(all_dist[nearest_idx])
+                # Nearest index (GPU -> CPU scalar)
+                nearest_idx = int(to_cpu(xp.argmin(d_dev)))
+                denom = float(to_cpu(d_dev[nearest_idx])) or 1e-12  # avoid zero divide
 
-                # Direction update + step
-                new_dir = edge.dir / np.linalg.norm(edge.dir)
-                new_dir = new_dir + w * grad_dist
+                # Gradient away from nearest disallowed point (CPU math)
+                grad_dist = (pred - nodes[nearest_idx]) / denom
+
+                new_dir = edge.dir + w * grad_dist
                 new_dir /= np.linalg.norm(new_dir)
 
                 new_node = nodes[edge.n2] + new_dir * dx * s
 
-                # Domain check (legacy via VTK)
+                # Domain check via VTK locator (CPU)
                 if not self._point_in_mesh_vtk(new_node):
                     end_nodes.append(edge.n2)
                     _LOGGER.debug(
-                        "Grow stop: edge=%d tip=%d (outside domain)", edge_id, edge.n2
+                        "Grow step %d/%d: edge=%d terminated by domain exit.",
+                        step + 1,
+                        n_steps,
+                        edge_id,
                     )
                     continue
 
-                # Commit node/edge
+                # Commit new node/edge (legacy FIFO behavior)
                 new_node_id = len(nodes)
                 nodes.append(new_node)
                 branches[b].append(new_node_id)
 
-                new_edge_id = len(edges)
+                next_edge_id = len(edges)
                 edges.append(Edge(edge.n2, new_node_id, nodes, edge_id, b))
-                growing_queue.append(new_edge_id)
+                growing_queue.append(next_edge_id)
 
                 _LOGGER.debug(
-                    "Grow step %d/%d: edge=%d -> new_node_id=%d",
+                    "Grow step %d/%d: edge=%d -> node=%d (branch=%d)",
                     step + 1,
                     n_steps,
                     edge_id,
                     new_node_id,
+                    b,
                 )
 
-            # proceed with the newly created tips for the next step
+            # Next step iterates over newly created edges
             edge_queue = growing_queue
 
-        _LOGGER.info("Growing complete: tips remaining=%d", len(edge_queue))
         return edge_queue
 
     def _finalize_outputs(
@@ -829,7 +847,7 @@ class FractalTree:
             )
 
             _LOGGER.info("Generation %d: growing phase", gen)
-            edge_queue = self._grow_generation(
+            edge_queue = self._growing_generation(
                 edge_queue=edge_queue,
                 nodes=nodes,
                 edges=edges,
