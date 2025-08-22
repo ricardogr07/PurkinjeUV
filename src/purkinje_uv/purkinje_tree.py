@@ -19,8 +19,9 @@ from fimpy import create_fim_solver
 import vtk
 from vtkmodules.numpy_interface import dataset_adapter as dsa
 from utils.vtkutils import vtk_unstructuredgrid_from_list
+from .config import xp, to_device, to_cpu, is_gpu, backend_name, use
 
-logger = logging.getLogger(__name__)
+_LOGGER = logging.getLogger(__name__)
 
 
 class PurkinjeTree:
@@ -63,7 +64,7 @@ class PurkinjeTree:
         # conduction velocity
         self.cv = 2.5  # [m/s]
 
-        logger.info(
+        _LOGGER.info(
             f"PurkinjeTree initialized with {self.xyz.shape[0]} nodes"
             f" and {self.connectivity.shape[0]} edges"
         )
@@ -84,25 +85,48 @@ class PurkinjeTree:
         Returns:
             NDArray[Any]: Activation times for all nodes or only PMJ nodes.
         """
-        logger.info("Activating Purkinje tree with FIM solver")
+        _LOGGER.info(
+            "Activating Purkinje tree with FIM solver (backend=%s)", backend_name()
+        )
 
-        xyz = self.xyz
-        elm = self.connectivity
+        def _run_on_current_backend() -> NDArray[Any]:
+            # Choose device string for fimpy
+            fim_device = "cuda" if is_gpu() else "cpu"
 
-        ve = np.ones(elm.shape[0])
-        D = self.cv * np.eye(xyz.shape[1])[np.newaxis] * ve[..., np.newaxis, np.newaxis]
+            # Move data to the active backend
+            xyz_dev = to_device(self.xyz, dtype=float)
+            elm_dev = to_device(self.connectivity, dtype=int)
 
-        fim = create_fim_solver(xyz, elm, D, device="cpu")
-        act: NDArray[Any] = fim.comp_fim(x0, x0_vals)
+            ve_dev = to_device(np.ones(elm_dev.shape[0], dtype=float))
+            identity = xp.eye(int(xyz_dev.shape[1]), dtype=float)
+            D_dev = self.cv * ve_dev[:, None, None] * identity[None, :, :]
 
-        # update activation in VTK
+            x0_dev = to_device(x0, dtype=int)
+            x0_vals_dev = to_device(x0_vals, dtype=float)
+
+            # Create solver and compute on the active backend
+            fim = create_fim_solver(xyz_dev, elm_dev, D_dev, device=fim_device)
+            act_dev: Any = fim.comp_fim(x0_dev, x0_vals_dev)
+
+            # Bring back to CPU for VTK + return
+            return to_cpu(act_dev)
+
+        try:
+            act = _run_on_current_backend()
+        except Exception as exc:
+            # If GPU path fails, fall back to CPU automatically
+            if is_gpu():
+                _LOGGER.warning("FIM on GPU failed (%s); falling back to CPU.", exc)
+                with use("cpu"):
+                    act = _run_on_current_backend()
+            else:
+                raise
+
+        # update activation in VTK (expects NumPy)
         da = dsa.WrapDataObject(self.vtk_tree)
         da.PointData["activation"][:] = act
 
-        if return_only_pmj:
-            return act[self.pmj]
-        else:
-            return act
+        return act[self.pmj] if return_only_pmj else act
 
     def save(self, fname: str) -> None:
         """Write the current activation state to a VTK UnstructuredGrid file.
@@ -110,7 +134,7 @@ class PurkinjeTree:
         Args:
             fname (str): Path to the output .vtu file.
         """
-        logger.info(f"Saving PurkinjeTree to VTK at {fname}")
+        _LOGGER.info(f"Saving PurkinjeTree to VTK at {fname}")
 
         writer = vtk.vtkXMLUnstructuredGridWriter()
         writer.SetFileName(fname)
@@ -123,7 +147,7 @@ class PurkinjeTree:
         Args:
             fname (str): Path to the output .vtp file.
         """
-        logger.info(f"Saving PMJs to VTP at {fname}")
+        _LOGGER.info(f"Saving PMJs to VTP at {fname}")
 
         xyz = self.xyz[self.pmj]
         da = dsa.WrapDataObject(self.vtk_tree)
@@ -153,21 +177,38 @@ class PurkinjeTree:
         point_data: Optional[Dict[str, Any]] = None,
         cell_data: Optional[Dict[str, Any]] = None,
     ) -> None:
-        """Export the Purkinje tree as a meshio Mesh with line cells.
-
-        Args:
-            fname (str): Path to the output file (format inferred by extension).
-            point_data (Optional[Dict[str, Any]]): Optional per-node data arrays.
-            cell_data (Optional[Dict[str, Any]]): Optional per-cell data arrays.
-        """
-        logger.info(f"Saving PurkinjeTree to meshio format at {fname}")
+        """Export the Purkinje tree as a meshio Mesh with line cells."""
+        _LOGGER.info(f"Saving PurkinjeTree to meshio format at {fname}")
 
         xyz = self.xyz
         edges = self.extract_edges()
-        mesh = meshio.Mesh(points=xyz, cells={"line": edges})
-        mesh.point_data = point_data or {}
-        mesh.cell_data = cell_data or {}
 
+        # Normalize point_data
+        pd: Dict[str, Any] = {}
+        if point_data:
+            for k, v in point_data.items():
+                pd[k] = np.asarray(v)
+
+        # Normalize cell_data to meshio's
+        cd: Dict[str, list[np.ndarray]] = {}
+        if cell_data:
+            # If value is a dict, assume dict-of-dicts keyed by cell type (e.g., "line")
+            first_val = next(iter(cell_data.values()))
+            if isinstance(first_val, dict):
+                line_dict = cell_data.get("line", {})
+                for name, arr in line_dict.items():
+                    cd[name] = [np.asarray(arr)]
+            else:
+                # Already in meshio shape, but allow single arrays (wrap to list)
+                for name, arr in cell_data.items():
+                    if isinstance(arr, (list, tuple)):
+                        cd[name] = [np.asarray(a) for a in arr]
+                    else:
+                        cd[name] = [np.asarray(arr)]
+
+        mesh = meshio.Mesh(points=xyz, cells=[("line", edges)])
+        mesh.point_data = pd
+        mesh.cell_data = cd
         mesh.write(fname)
 
     def extract_edges(self) -> NDArray[Any]:
