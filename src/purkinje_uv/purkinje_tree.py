@@ -91,7 +91,7 @@ class PurkinjeTree:
 
         def _run_on_current_backend() -> NDArray[Any]:
             # Choose device string for fimpy
-            fim_device = "cuda" if is_gpu() else "cpu"
+            fim_device = "gpu" if is_gpu() else "cpu"
 
             # Move data to the active backend
             xyz_dev = to_device(self.xyz, dtype=float)
