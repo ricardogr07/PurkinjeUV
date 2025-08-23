@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "purkinje-uv"
-version = "0.3.0"
+version = "0.4.0"
 description = "Utilities to generate Purkinje networks from fractal trees and mesh surfaces"
 authors = [{ name = "Ricardo García Ramírez", email = "rgr.5882@gmail.com" }]
 readme = "README.md"
